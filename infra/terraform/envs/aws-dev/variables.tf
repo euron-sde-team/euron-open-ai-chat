@@ -112,6 +112,25 @@ variable "moderation_provider" {
   default     = "none"
 }
 
+variable "push_provider" {
+  description = "PUSH_PROVIDER: none or fcm (push to the native apps; the service account goes in <name_prefix>/push)."
+  type        = string
+  default     = "none"
+}
+
+variable "push_preview" {
+  description = "PUSH_PREVIEW: chat title and the start of the answer in notifications. Off by default."
+  type        = bool
+  default     = false
+}
+
+variable "fcm_service_account_json" {
+  description = "Optional FCM_SERVICE_ACCOUNT_JSON (stored in state). Prefer null and putting it in <name_prefix>/push by hand."
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
 variable "media_cors_extra_origins" {
   description = "Extra origins allowed to upload to the media bucket, e.g. [\"http://localhost:3540\"] for make up-aws."
   type        = list(string)

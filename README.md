@@ -71,7 +71,8 @@ The parts that usually go wrong in AI chat apps are designed in, not bolted on:
 
 The same API is built to serve a **ChatGPT-like mobile app**: native sessions with a refresh
 token in the body, resumable streams that work from React Native, presigned uploads with
-progress, and a typed client package with no browser dependencies
+progress, opt-in push notifications when an answer finishes in the background, and a typed
+client package with no browser dependencies
 ([docs/guides/mobile-clients.md](docs/guides/mobile-clients.md)).
 
 Everything runs on a laptop with no API key at all: deterministic stand-ins answer for the model
@@ -168,7 +169,7 @@ Euron Open AI Chat is a complete assistant you run yourself, with those edges do
 | **Knowledge** | Web search with numbered citations (SearXNG, Tavily, Exa or Brave), reading pages, attachments (images for vision models, PDF, Word, Excel, CSV, text and code), projects with instructions and searchable files, memory |
 | **Images** | Generation and editing in chat or in a studio, a gallery, OpenAI or Gemini image models |
 | **Control plane** | Users and roles, quota tiers and overrides, providers and models with a test call, settings and feature switches, shared links, audit log, usage overview |
-| **Mobile-ready API** | Native token mode, resumable SSE that works from React Native, presigned uploads, a DOM-free typed client |
+| **Mobile-ready API** | Native token mode, resumable SSE that works from React Native, presigned uploads, opt-in push (FCM), a DOM-free typed client |
 | **Infrastructure** | 13 Terraform modules, 3 environments (local emulator, AWS dev, AWS prod) |
 | **Tests** | 318 unit, 185 integration on real Postgres and Redis, 13 browser end-to-end |
 | **License** | MIT |
@@ -241,7 +242,7 @@ Euron Open AI Chat is a complete assistant you run yourself, with those edges do
 | **Sharing** | Frozen snapshot links with view counts, revocation by the owner or an admin, a public read-only page |
 | **Account** | Sign-up with email verification (open, invite-only by email domain, or closed), two-factor sign-in with recovery codes, sessions, data export, account deletion with a grace period |
 | **Control plane** | Overview, users (roles, tiers, own limits, suspend, ban, erase), quota tiers, providers and models with a test call, settings and feature switches, shared links, audit log |
-| **Mobile clients** | Native token mode, resumable streams over SSE (fetch or XHR), presigned uploads, `minSupportedVersion` and feature flags in `/api/meta` |
+| **Mobile clients** | Native token mode, resumable streams over SSE (fetch or XHR), presigned uploads, `minSupportedVersion` and feature flags in `/api/meta`, "your answer is ready" push through Firebase Cloud Messaging, armed per answer ([push guide](docs/guides/push.md)) |
 
 ## 🏗️ Architecture
 
@@ -483,12 +484,11 @@ in any response or row. See [docs/guides/testing.md](docs/guides/testing.md).
 | **Architecture** | [HLD](docs/architecture/HLD.md), [LLD](docs/architecture/LLD.md), [data model](docs/architecture/data-model.md), [chat engine](docs/architecture/chat-engine.md), [streaming and resume](docs/architecture/streaming-and-resume.md), [providers](docs/architecture/providers.md), [tools and safety](docs/architecture/tools-and-safety.md), [files](docs/architecture/files.md), [quotas](docs/architecture/quotas.md), [security](docs/architecture/security.md), [threat model](docs/architecture/threat-model.md) |
 | **Decisions** | [14 architecture decision records](docs/architecture/adr/README.md) |
 | **API** | [REST contract](docs/api/rest-contract.md), [streaming](docs/api/streaming.md), [OpenAPI](docs/api/openapi.yaml) |
-| **Guides** | [Quickstart](docs/guides/quickstart-local.md), [configuration](docs/guides/configuration.md), [providers](docs/guides/providers.md), [web search](docs/guides/web-search.md), [deploy to AWS](docs/guides/deploy-aws.md), [operations](docs/guides/operations.md), [mobile clients](docs/guides/mobile-clients.md), [testing](docs/guides/testing.md), [troubleshooting](docs/guides/troubleshooting.md), [walkthrough](docs/guides/walkthrough.md) |
+| **Guides** | [Quickstart](docs/guides/quickstart-local.md), [configuration](docs/guides/configuration.md), [providers](docs/guides/providers.md), [web search](docs/guides/web-search.md), [deploy to AWS](docs/guides/deploy-aws.md), [operations](docs/guides/operations.md), [mobile clients](docs/guides/mobile-clients.md), [push notifications](docs/guides/push.md), [testing](docs/guides/testing.md), [troubleshooting](docs/guides/troubleshooting.md), [walkthrough](docs/guides/walkthrough.md) |
 
 ## 🗺️ Roadmap
 
 - A React Native app for iOS and Android, served by this API
-- Push notifications when a long answer finishes
 - Voice conversations in real time
 - Retrieval with embeddings as an optional upgrade to full-text project search
 - SSO with OpenID Connect

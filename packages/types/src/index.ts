@@ -71,6 +71,8 @@ export interface AppMeta {
     memory: boolean;
     projects: boolean;
     sharing: boolean;
+    /** The server can send push notifications to the native apps ("your answer is ready"). */
+    push: boolean;
   };
   limits: {
     /** Largest upload a user on the default tier may send, in megabytes. */
@@ -83,6 +85,32 @@ export interface AppMeta {
   support: { email: string | null };
   /** For native apps: older versions are asked to update ("1.4.0"); null when every version works. */
   minSupportedVersion: string | null;
+}
+
+export type PushPlatform = "IOS" | "ANDROID";
+
+/** PUT /api/me/devices: an installed app that may receive push notifications. */
+export interface RegisterDeviceInput {
+  platform: PushPlatform;
+  /** The FCM registration token. */
+  token: string;
+  appVersion?: string | null;
+}
+
+export interface PushDevice {
+  id: string;
+  platform: PushPlatform;
+  appVersion: string | null;
+  createdAt: string;
+  lastSeenAt: string;
+}
+
+/**
+ * POST /api/turns/:id/notify. `armed`: a push goes to your devices when the answer
+ * finishes. `finished`: it already has, nothing will be sent (follow the turn instead).
+ */
+export interface TurnNotifyResult {
+  state: "armed" | "finished";
 }
 
 export interface AuthResult {

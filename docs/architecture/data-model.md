@@ -1,7 +1,7 @@
 # Data model
 
-The whole schema is one migration, [`db/migrations/0001_init.sql`](../../db/migrations/0001_init.sql),
-applied by [`db/migrate.ts`](../../db/migrate.ts) (forward-only, checksummed). Runtime
+The schema is [`db/migrations/0001_init.sql`](../../db/migrations/0001_init.sql) plus
+[`0002_push.sql`](../../db/migrations/0002_push.sql) (push devices), applied by [`db/migrate.ts`](../../db/migrate.ts) (forward-only, checksummed). Runtime
 queries use Kysely with types generated into
 [`apps/api/src/db/types.ts`](../../apps/api/src/db/types.ts). This page groups the tables
 by domain and explains why each exists and which constraints carry a rule.
@@ -57,6 +57,7 @@ by domain and explains why each exists and which constraints carry a rule.
 | `sessions` | One row per refresh token | `token_hash` unique (SHA-256); `family_id` groups every rotation of one login; `replaced_by` marks a rotated row for reuse detection; partial index on live sessions |
 | `auth_tokens` | Email verification and password reset tokens | Hash only; single use (`used_at`) |
 | `totp_recovery_codes` | HMACs of the ten recovery codes | Primary key `(user_id, code_hash)` |
+| `push_devices` | One row per installed native app that may be told "your answer is ready": `platform` (`IOS` or `ANDROID`, a `CHECK`, not an enum), the FCM `token` (1 to 4096), `app_version` (up to 40), `last_seen_at` | `token` is unique: a token belongs to one account at a time, and registering it from another account moves the row. A row alone never causes a push; the app arms each answer ([ADR 0015](adr/0015-push-opt-in-per-answer.md)). Deleted on native sign-out with `deviceToken`, by `revokeAllForUser` (sign out everywhere, password change or reset, ban, deletion) and when FCM reports the token dead. Index on `user_id` |
 | `user_preferences` | About me, custom instructions (1500 characters each), answer style, memory on or off, web search by default, default model, voice | A missing row means defaults. These shape every answer through the system prompt ([chat-engine.md](chat-engine.md)); `default_model_id` is `ON DELETE SET NULL` so removing a model never breaks a user |
 
 ### Files
@@ -112,6 +113,7 @@ by domain and explains why each exists and which constraints carry a rule.
 | Provider, search and moderation keys | Environment and Secrets Manager only; a database dump or an admin endpoint cannot leak them |
 | Tool inputs and outputs (search results, page text) | Only labels in `tool_trace` and the numbered `sources`; page text is used for one turn and dropped |
 | Prompts or answers in `usage_daily`, the audit log or logs | Usage is counted, not recorded |
+| Notification text, or which answers were pushed | The arming flag is a Redis key (`turn:<id>:notify`, one hour) taken when the turn ends; the push job builds the text and sends it. Nothing about a push is written to a table |
 | Audio | Dictation reads the upload from memory; read aloud streams through |
 | A copy of a file for each share | A share holds file ids; the image route signs a URL for the original |
 | Embeddings | Postgres full-text search instead ([ADR 0009](adr/0009-postgres-full-text-search.md)) |
@@ -120,7 +122,7 @@ by domain and explains why each exists and which constraints carry a rule.
 
 - Deleting a **user** cascades to everything they own; in practice users are anonymised
   (`anonymiseUser`), which deletes shares, images, conversations, projects, memories,
-  preferences and overrides, marks files `DELETED` and keeps `usage_daily` and audit rows
+  preferences, overrides and push devices, marks files `DELETED` and keeps `usage_daily` and audit rows
   attached to the anonymised account.
 - Deleting a **conversation** cascades to its messages and `message_files`; files stay
   until `maintenance.expire-files` finds them unreferenced. A share made from it keeps

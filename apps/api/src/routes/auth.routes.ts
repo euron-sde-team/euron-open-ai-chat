@@ -30,7 +30,7 @@ router.post("/login", strict, ctrl.login);
  * SESSION_EXPIRED for a revoked or replayed one. Native: body `{ refreshToken }`, returns `IssuedNativeSession`.
  */
 router.post("/refresh", rateLimit("auth-refresh", 60, 60, "ip"), ctrl.refresh);
-/** Revoke this session's family. 204. Native: body `{ refreshToken }`. */
+/** Revoke this session's family. 204. Native: body `{ refreshToken, deviceToken? }`; that device also stops receiving pushes. */
 router.post("/logout", ctrl.logout);
 /** Revoke every session and access token. 204. */
 router.post("/logout-all", authenticate, ctrl.logoutEverywhere);

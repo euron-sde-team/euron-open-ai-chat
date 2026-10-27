@@ -5,6 +5,7 @@
  */
 import { registerChatJobs } from "./chat.jobs";
 import { registerMaintenanceJobs } from "./maintenance.jobs";
+import { registerPushJobs } from "./push.jobs";
 
 let registered = false;
 
@@ -13,4 +14,5 @@ export function registerAllJobs(): void {
   registered = true;
   registerMaintenanceJobs();
   registerChatJobs();
+  registerPushJobs();
 }

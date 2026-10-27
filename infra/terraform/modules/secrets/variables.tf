@@ -58,3 +58,18 @@ variable "brave_api_key" {
   default     = null
   sensitive   = true
 }
+
+# ─── Push notifications ──────────────────────────────────────────────────────
+
+variable "create_push_secret" {
+  description = "Create the <prefix>/push secret and inject FCM_SERVICE_ACCOUNT_JSON. A plain boolean so the decision is known at plan time."
+  type        = bool
+  default     = false
+}
+
+variable "fcm_service_account_json" {
+  description = "Initial FCM_SERVICE_ACCOUNT_JSON (the Firebase service account key file). Null writes \"set-me\"."
+  type        = string
+  default     = null
+  sensitive   = true
+}

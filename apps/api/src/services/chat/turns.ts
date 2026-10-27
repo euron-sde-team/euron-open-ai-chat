@@ -21,6 +21,7 @@ import { toFile } from "../../presenters/file.presenter";
 import { chatRepo, type ConversationRow, type MessageRow } from "../../repositories/chat.repository";
 import { fileRepo, type FileRow } from "../../repositories/file.repository";
 import { enqueue } from "../../jobs/registry";
+import { afterTurn } from "../push.service";
 import { readImageBase64 } from "../file.service";
 import type { ResolvedModel } from "../models.service";
 import { assertTokensLeft, QuotaExceededError, recordUsage, weighted } from "../quota.service";
@@ -131,6 +132,7 @@ export async function runTurn(plan: TurnPlan): Promise<void> {
     if (plan.firstAnswer && !plan.conversation.title_locked) await title(plan, writer, state.content);
     if (state.dropped > 0) await enqueue("chat.summarize", { conversationId: plan.conversation.id }).catch((err) => captureError(err, { where: "enqueue summarize" }));
     await writer.emit({ type: "done", status: "COMPLETE" });
+    await afterTurn(plan.answerId, plan.conversation.id, "COMPLETE");
   } catch (err) {
     await flush().catch(() => undefined);
     const cancelled = controller.signal.aborted && (err as Error).name === "AbortError";
@@ -153,6 +155,7 @@ export async function runTurn(plan: TurnPlan): Promise<void> {
     if (plan.mode === "chat" && (state.input || state.output)) await recordUsage({ userId: plan.userId, modelId: plan.model.model.id, inputTokens: state.input, outputTokens: state.output, weightedTokens: weighted(state.input, state.output, Number(plan.model.model.weight)), messages: 1 }).catch(() => undefined);
     if (code) await writer.emit({ type: "error", code, message: ERROR_MESSAGES[code] }).catch(() => undefined);
     await writer.emit({ type: "done", status: cancelled ? "CANCELLED" : "FAILED" }).catch(() => undefined);
+    await afterTurn(plan.answerId, plan.conversation.id, cancelled ? "CANCELLED" : "FAILED");
   } finally {
     if (timer) clearTimeout(timer);
     await offCancel().catch(() => undefined);

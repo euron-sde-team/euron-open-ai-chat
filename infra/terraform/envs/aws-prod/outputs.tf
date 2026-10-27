@@ -72,3 +72,8 @@ output "search_secret_name" {
   description = "Secret holding the hosted search keys (replace the one in use), or null."
   value       = module.chat.search_secret_name
 }
+
+output "push_secret_name" {
+  description = "Secret holding FCM_SERVICE_ACCOUNT_JSON (replace \"set-me\" with the key file), or null."
+  value       = module.chat.push_secret_name
+}

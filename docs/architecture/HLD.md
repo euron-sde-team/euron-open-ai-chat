@@ -262,6 +262,7 @@ in the API process (tests, tiny installs) and is refused in production.
 - **Vendor SDKs.** Every provider is plain `fetch` and one SSE reader
   ([ADR 0004](adr/0004-providers-behind-one-interface.md)).
 - **Admin access to conversations.** There is no endpoint for it.
-- **Push notifications, realtime voice, code execution, agents that act on other systems.**
+- **Realtime voice, code execution, agents that act on other systems.** (Push notifications
+  exist, but only for an answer the native app armed: [ADR 0015](adr/0015-push-opt-in-per-answer.md).)
 - **Hard deletion of usage history.** Erasing an account removes identity and content;
   `usage_daily` counts stay attached to the anonymised row.

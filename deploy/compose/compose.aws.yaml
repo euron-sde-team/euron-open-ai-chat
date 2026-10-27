@@ -11,7 +11,7 @@
 # media_cors_extra_origins in the aws-dev terraform.tfvars.
 #
 # make up-aws passes .env.aws as a second --env-file, so its values both interpolate
-# the base's ${NAME:-default} entries (MAIL_FROM, PROVIDER_KEYS, SEARCH_PROVIDER,
+# the base's ${NAME:-default} entries (MAIL_FROM, PROVIDER_KEYS, SEARCH_PROVIDER, PUSH_PROVIDER,
 # PRODUCT_NAME, ...) and, through env_file below, add the keys the base does not set (S3_BUCKET,
 # SES_CONFIGURATION_SET, MEDIA_ORIGINS, ...). Check what a service will get with:
 #   docker compose --env-file deploy/compose/.env --env-file deploy/compose/.env.aws \

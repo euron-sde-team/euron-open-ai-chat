@@ -34,3 +34,10 @@ route53_zone_id = "<ROUTE53_HOSTED_ZONE_ID>" # automatic certificates + DNS; or 
 
 # Prompt moderation through the OpenAI moderation endpoint (needs an openai key above).
 # moderation_provider = "openai"
+
+# Push notifications to the native apps (docs/guides/push.md). The Firebase service
+# account key file goes into <name_prefix>/push ("set-me" until replaced):
+# push_provider = "fcm"
+#   aws secretsmanager put-secret-value --secret-id <name_prefix>/push \
+#     --secret-string file://service-account.json
+# push_preview = false   # true puts the chat title and the answer's start in notifications

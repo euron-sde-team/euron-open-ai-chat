@@ -91,6 +91,11 @@ x-api-env: &api-env
   BRAVE_API_KEY: ${BRAVE_API_KEY:-}
   # Prompt moderation: none, stub (flags input containing STUB_FLAG) or openai.
   MODERATION_PROVIDER: ${MODERATION_PROVIDER:-none}
+  # Push to the native apps: none, stub (records messages at the stubs' GET /fcm/messages)
+  # or fcm (needs FCM_SERVICE_ACCOUNT_JSON). PUSH_PREVIEW puts answer text in notifications.
+  PUSH_PROVIDER: ${PUSH_PROVIDER:-none}
+  FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
+  PUSH_PREVIEW: ${PUSH_PREVIEW:-false}
   # open_url refuses private addresses; the stubs host is the one local exception, so
   # the stub search results can be opened. Never set this on a real deployment.
   FETCH_ALLOW_HOSTS: ${FETCH_ALLOW_HOSTS:-stubs}

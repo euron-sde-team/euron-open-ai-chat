@@ -31,7 +31,7 @@ closed by a specific control:
 | TB1 | Internet to the edge (CloudFront, WAF, ALB): every request is untrusted |
 | TB2 | Edge to tasks: TLS ends at the ALB, tasks in private subnets, the CDN's secret origin header required |
 | TB3 | Application to its stores (RDS, ElastiCache, S3, Secrets Manager, KMS): IAM task roles, security groups, TLS |
-| TB4 | Application to model, search and moderation providers: outbound HTTPS with keys from the environment |
+| TB4 | Application to model, search, moderation and push providers: outbound HTTPS with keys from the environment |
 | TB5 | Application to arbitrary public web servers (`open_url`): outbound requests chosen by a model |
 | TB6 | Browser or app straight to S3 (presigned PUT and signed GET) |
 | TB7 | Model output back into the application: tool calls and text, untrusted |
@@ -177,6 +177,19 @@ Inside the application:
 | D | A task dies mid-turn | The sweep fails the turn after 15 minutes | Low |
 | D | Large JSON bodies | 2 MB limit | Low |
 | D | Slow-loris SSE | ALB idle timeout, keep-alive, per-user send limits | Low |
+
+### 12. Push notifications
+
+| STRIDE | Threat | Control | Residual |
+| --- | --- | --- | --- |
+| I | Answer text on a locked screen or at Google and Apple | Generic text by default; `PUSH_PREVIEW` is an explicit operator choice | Low; accepted when the operator turns previews on |
+| T | Arm a push on another user's turn | `notify` reads the turn with `findOwnedMessage`; foreign ids are 404 | Low |
+| S | Register someone else's token to receive their notifications | A token is issued by FCM to one app install and is not guessable; registering moves it to the caller, so the earlier account stops receiving, and the notification carries no text by default | Low |
+| I | Device tokens leak through the API or logs | `PushDevice` has no token field; failures log the device id; `token` is redacted | Low |
+| E | Pushes keep reaching a phone after the account is taken back | Sign out everywhere, password change or reset, ban and deletion delete every device of the account | Low |
+| I | The FCM service account key leaks | Secrets Manager on AWS, never logged; only the messaging role, so it can send notifications to this app's devices and nothing else | Low |
+| T | `PUSH_PROVIDER=stub` left on in production | Boot refused | Low |
+| D | Push volume as a cost or spam vector | One push per armed answer per device, bounded by the send rate limit; FCM itself is free | Low |
 
 ## Summary of open items
 

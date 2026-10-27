@@ -111,7 +111,8 @@ paths:
     post:
       tags: ["auth"]
       operationId: "auth_logout"
-      summary: "Revoke this session's family. 204. Native: body `{ refreshToken }`."
+      summary: "Revoke this session's family. 204. Native: body `{ refreshToken, deviceToken? }`; that device also stops receiving..."
+      description: "Revoke this session's family. 204. Native: body `{ refreshToken, deviceToken? }`; that device also stops receiving pushes."
       security: []
       responses:
         "2XX": { description: Success }
@@ -296,6 +297,27 @@ paths:
       summary: "Change preferences: any of `{ aboutMe, customInstructions, answerStyle, memoryEnabled, webSearchDefault,..."
       description: "Change preferences: any of `{ aboutMe, customInstructions, answerStyle, memoryEnabled, webSearchDefault, defaultModelId, voice }`."
       security: [{ bearer: [] }]
+      responses:
+        "2XX": { description: Success }
+        "4XX": { description: Client error, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  "/api/me/devices":
+    put:
+      tags: ["me"]
+      operationId: "me_registerDevice"
+      summary: "Native apps: register this install for push, `{ platform, token, appVersion? }` (`PushDevice`). The same token moves..."
+      description: "Native apps: register this install for push, `{ platform, token, appVersion? }` (`PushDevice`). The same token moves to whoever registers it last."
+      security: [{ bearer: [] }]
+      responses:
+        "2XX": { description: Success }
+        "4XX": { description: Client error, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  "/api/me/devices/{token}":
+    delete:
+      tags: ["me"]
+      operationId: "me_removeDevice"
+      summary: "Stop push to this install. 204 (also when the token is unknown or someone else's)."
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
       responses:
         "2XX": { description: Success }
         "4XX": { description: Client error, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
@@ -503,6 +525,18 @@ paths:
       tags: ["turns"]
       operationId: "turns_cancel"
       summary: "Stop the answer: the partial text is kept with status CANCELLED. 204."
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "2XX": { description: Success }
+        "4XX": { description: Client error, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  "/api/turns/{id}/notify":
+    post:
+      tags: ["turns"]
+      operationId: "turns_notify"
+      summary: "Native apps, going to the background mid-answer: push to my devices when this answer finishes (`TurnNotifyResult`)...."
+      description: "Native apps, going to the background mid-answer: push to my devices when this answer finishes (`TurnNotifyResult`). 409 PUSH_DISABLED when the server has no push provider."
       security: [{ bearer: [] }]
       parameters:
         - { name: id, in: path, required: true, schema: { type: string } }

@@ -11,3 +11,8 @@ export const router = Router();
 router.get("/:id/events", authenticate, ctrl.events);
 /** Stop the answer: the partial text is kept with status CANCELLED. 204. */
 router.post("/:id/cancel", authenticate, ctrl.cancel);
+/**
+ * Native apps, going to the background mid-answer: push to my devices when this answer finishes (`TurnNotifyResult`).
+ * 409 PUSH_DISABLED when the server has no push provider.
+ */
+router.post("/:id/notify", authenticate, ctrl.notify);

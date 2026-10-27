@@ -19,7 +19,7 @@ describe("GET /api/meta", () => {
       appName: DEFAULT_SETTINGS.appName,
       tagline: DEFAULT_SETTINGS.tagline,
       registration: "OPEN",
-      features: { webSearch: true, imageGeneration: true, dictation: true, readAloud: true, memory: true, projects: true, sharing: true },
+      features: { webSearch: true, imageGeneration: true, dictation: true, readAloud: true, memory: true, projects: true, sharing: true, push: true },
       limits: { maxFileMb: 25, maxFilesPerMessage: 10, maxMessageChars: 32000, acceptedMimeTypes: ATTACHMENT_MIME_TYPES },
       support: { email: null },
       minSupportedVersion: null,

@@ -40,10 +40,14 @@ export function coreEndpoints(h: Helpers) {
     resendVerification: (email: string) => http.request<void>("POST", "/auth/resend-verification", { body: { email }, noRefresh: true }),
     login: async (body: LoginInput) => keep(await http.request<LoginResult>("POST", "/auth/login", { body, withCredentials: true, noRefresh: true })),
     refresh: () => http.refreshSession(),
-    /** Ends this session (native: sends and then forgets the stored refresh token). */
-    logout: async () => {
+    /**
+     * Ends this session (native: sends and then forgets the stored refresh token; pass the
+     * push token so this device stops receiving notifications).
+     */
+    logout: async (deviceToken?: string | null) => {
       try {
-        await http.request<void>("POST", "/auth/logout", { body: await http.logoutBody(), withCredentials: true, noRefresh: true });
+        const body = await http.logoutBody();
+        await http.request<void>("POST", "/auth/logout", { body: body && deviceToken ? { ...body, deviceToken } : body, withCredentials: true, noRefresh: true });
       } finally {
         await http.clearNativeSession();
       }

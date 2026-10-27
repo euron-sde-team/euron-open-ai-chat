@@ -268,3 +268,28 @@ describe("native token mode", () => {
     expect(stored()).toBeNull();
   });
 });
+
+describe("native push endpoints", () => {
+  it("sends the device token on sign-out, registers devices and arms a turn notification", async () => {
+    let stored: string | null = "rt-1";
+    const calls: { url: string; init: RequestInit }[] = [];
+    const client = createApiClient({
+      baseUrl: "/api",
+      getAccessToken: () => "a",
+      native: { getRefreshToken: async () => stored, setRefreshToken: async (t) => void (stored = t) },
+      fetch: (async (url: string, init: RequestInit) => {
+        calls.push({ url, init });
+        if (url.endsWith("/notify")) return json(200, { state: "armed" });
+        if (url.endsWith("/me/devices")) return json(200, { id: "d", platform: "IOS", appVersion: "1.0.0", createdAt: "x", lastSeenAt: "x" });
+        return new Response(null, { status: 204 });
+      }) as unknown as typeof fetch,
+    });
+    await client.me.registerDevice({ platform: "IOS", token: "fcm-1", appVersion: "1.0.0" });
+    expect(calls.at(-1)!.init.method).toBe("PUT");
+    await expect(client.turns.notify("01T")).resolves.toEqual({ state: "armed" });
+    expect(calls.at(-1)!.url).toBe("/api/turns/01T/notify");
+    await client.auth.logout("fcm-1");
+    expect(JSON.parse(calls.at(-1)!.init.body as string)).toEqual({ refreshToken: "rt-1", deviceToken: "fcm-1" });
+    expect(stored).toBeNull();
+  });
+});

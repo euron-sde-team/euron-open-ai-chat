@@ -67,7 +67,7 @@ memories (200), shares (200), tiers, providers, models, sessions.
 | POST | /auth/login `{ login, password, totp? \| recoveryCode? }` | public | `AuthResult`, or `{ totpRequired: true }`; 401 `INVALID_CREDENTIALS`, `INVALID_TOTP`; 403 `EMAIL_NOT_VERIFIED`, `ACCOUNT_BANNED`; 429 once a failure budget is spent |
 | POST | /auth/refresh | cookie | `AuthResult` with a rotated cookie; **204** without a cookie; 401 `SESSION_EXPIRED` |
 | POST | /auth/refresh `{ refreshToken }` + `X-Client: native` | body token | `IssuedNativeSession` (rotated); 401 `SESSION_EXPIRED` |
-| POST | /auth/logout | cookie, or `{ refreshToken }` native | 204 |
+| POST | /auth/logout | cookie, or `{ refreshToken, deviceToken? }` native | 204; `deviceToken` also removes that push device |
 | POST | /auth/logout-all | auth | 204 (every session revoked, `token_version` bumped) |
 | POST | /auth/reset-password `{ token, password }` | public | 204 (sessions revoked) |
 | POST | /auth/change-password `{ currentPassword, newPassword }` | auth | 204 (every session revoked; sign in again) |
@@ -85,6 +85,8 @@ memories (200), shares (200), tiers, providers, models, sessions.
 | GET | /meta | public | `AppMeta`: name, tagline, registration, feature flags (already combined with what the server can do), limits, support email, `minSupportedVersion`; cached 30 s |
 | GET | /models | auth | `ModelCatalog`: usable chat models with capabilities and weight, and the image model (or null) |
 | GET | /me/usage | auth | `Usage`: today's tokens and images against the limits, `maxFileMb`, `resetsAt` |
+| PUT | /me/devices `{ platform, token, appVersion? }` | auth | `PushDevice` (no token). Native apps register for push; the same token moves to whoever registers it last ([push](../guides/push.md)) |
+| DELETE | /me/devices/:token | auth | 204, also when the token is unknown or another account's |
 | GET, PATCH | /me/preferences | auth | `Preferences`; PATCH takes any of `aboutMe`, `customInstructions`, `answerStyle`, `memoryEnabled`, `webSearchDefault`, `defaultModelId`, `voice` (400 `VOICE_UNKNOWN`) |
 
 The exact field names of every body are in [`openapi.yaml`](openapi.yaml) and the zod
@@ -107,6 +109,7 @@ schemas in [`apps/api/src/controllers/`](../../apps/api/src/controllers/auth.con
 | GET | /messages/:id/speech | auth | `audio/mpeg` stream (read aloud); 503 `MODEL_UNAVAILABLE`; 403 `READ_ALOUD_DISABLED` |
 | GET | /turns/:id/events?after=<seq> | auth | `text/event-stream` from `after` (or `Last-Event-ID`), ends after `done` |
 | POST | /turns/:id/cancel | auth | 204 (partial answer kept, status `CANCELLED`) |
+| POST | /turns/:id/notify | auth | `TurnNotifyResult`: `armed` (a push goes to my devices when the answer ends) or `finished`; 409 `PUSH_DISABLED` without a push provider ([ADR 0015](../architecture/adr/0015-push-opt-in-per-answer.md)) |
 
 `SendMessageInput`:
 
@@ -267,6 +270,7 @@ specific ones are thrown by services.
 | 403 | `UPLOAD_LINK_INVALID`, `UPLOAD_LINK_MISMATCH`, `FILE_LINK_INVALID` | Local storage links |
 | 404 | `NOT_FOUND`, `CONVERSATION_NOT_FOUND`, `MESSAGE_NOT_FOUND`, `TURN_NOT_FOUND`, `FILE_NOT_FOUND`, `PROJECT_NOT_FOUND`, `MEMORY_NOT_FOUND`, `IMAGE_NOT_FOUND`, `SHARE_NOT_FOUND`, `USER_NOT_FOUND`, `TIER_NOT_FOUND`, `PROVIDER_NOT_FOUND`, `MODEL_NOT_FOUND` | Missing, or not yours |
 | 409 | `TURN_IN_PROGRESS` | An answer is still being written in this chat |
+| 409 | `PUSH_DISABLED` | `POST /turns/:id/notify` on a server without push (`features.push` is false) |
 | 409 | `FILE_NOT_READY`, `FILE_IN_USE` | File state |
 | 409 | `PROJECT_LIMIT`, `PROJECT_FILE_LIMIT`, `MEMORY_LIMIT` | Caps |
 | 409 | `EMAIL_TAKEN`, `USERNAME_TAKEN`, `USERNAME_RESERVED`, `TOTP_ALREADY_ENABLED` | Account conflicts |
@@ -289,6 +293,7 @@ The API has no idempotency-key header. What is safe to repeat:
 | --- | --- |
 | `POST /files/:id/complete` | Safe: a file that is no longer `PENDING` is returned as it is |
 | `POST /turns/:id/cancel` | Safe: a no-op once the turn is final |
+| `POST /turns/:id/notify`, `PUT /me/devices`, `DELETE /me/devices/:token` | Safe: arming again resets the one-hour key; registering again updates `last_seen_at`; deleting again is 204 |
 | `GET /turns/:id/events?after=` | Safe by design: resume from the last `seq` you applied |
 | `DELETE` on shares, files, memories, projects | The second call is a 404 |
 | `PUT /chats/:id/leaf`, `PUT /messages/:id/feedback`, `PATCH` preferences, settings | Idempotent (last write wins) |

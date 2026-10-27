@@ -30,5 +30,6 @@ process.env.LOG_LEVEL ??= "silent";
 process.env.STUBS_URL = inject("stubsUrl");
 process.env.SEARCH_PROVIDER = "stub";
 process.env.MODERATION_PROVIDER = "stub";
+process.env.PUSH_PROVIDER = "stub";
 process.env.FETCH_ALLOW_HOSTS = "127.0.0.1";
 process.env.OPENAI_API_KEY = CANARY_KEY;

@@ -28,6 +28,11 @@ module "chat" {
   brave_api_key       = var.brave_api_key
   moderation_provider = var.moderation_provider
 
+  # Push to the native apps: the Firebase service account goes in <name_prefix>/push.
+  push_provider            = var.push_provider
+  push_preview             = var.push_preview
+  fcm_service_account_json = var.fcm_service_account_json
+
   log_level                  = var.log_level
   require_email_verification = var.require_email_verification
   # Anything else the API reads as a secret (SMTP_PASS, ...), as ECS secret references.

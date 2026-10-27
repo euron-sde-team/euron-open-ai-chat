@@ -18,6 +18,10 @@
 #   <prefix>/search         TAVILY_API_KEY, EXA_API_KEY, BRAVE_API_KEY for the web_search
 #                           tool: only when create_search_secret is true (a hosted search
 #                           provider is selected). Same "set-me" placeholder rule.
+#   <prefix>/push           FCM_SERVICE_ACCOUNT_JSON: the Firebase service account key file
+#                           for push notifications, injected whole. Only when
+#                           create_push_secret is true (PUSH_PROVIDER=fcm). Holds "set-me"
+#                           until replaced, which the API treats as not configured.
 #
 # Every third-party value can be passed as a sensitive variable (it then lands in
 # Terraform state), or left null and replaced by hand afterwards
@@ -112,6 +116,26 @@ resource "aws_secretsmanager_secret_version" "search" {
   }
 }
 
+resource "aws_secretsmanager_secret" "push" {
+  #checkov:skip=CKV2_AWS_57:A Firebase service account key; it is rotated in the Google Cloud console, then put here by hand.
+  count                   = var.create_push_secret ? 1 : 0
+  name                    = "${var.name_prefix}/push"
+  description             = "Firebase service account key for push notifications (FCM_SERVICE_ACCOUNT_JSON)"
+  kms_key_id              = var.kms_key_arn
+  recovery_window_in_days = var.recovery_window_in_days
+}
+
+resource "aws_secretsmanager_secret_version" "push" {
+  count     = var.create_push_secret ? 1 : 0
+  secret_id = aws_secretsmanager_secret.push[0].id
+  # The secret string IS the FCM_SERVICE_ACCOUNT_JSON value (injected whole, no JSON key).
+  secret_string = coalesce(var.fcm_service_account_json, "set-me")
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
 locals {
   search_keys = ["TAVILY_API_KEY", "EXA_API_KEY", "BRAVE_API_KEY"]
 
@@ -122,5 +146,7 @@ locals {
     # The whole secret string, not one JSON key of it: PROVIDER_KEYS is itself JSON.
     [{ name = "PROVIDER_KEYS", valueFrom = aws_secretsmanager_secret.provider_keys.arn }],
     flatten([for s in aws_secretsmanager_secret.search : [for k in local.search_keys : { name = k, valueFrom = "${s.arn}:${k}::" }]]),
+    # Also the whole secret string: the service account key file is itself JSON.
+    [for s in aws_secretsmanager_secret.push : { name = "FCM_SERVICE_ACCOUNT_JSON", valueFrom = s.arn }],
   )
 }

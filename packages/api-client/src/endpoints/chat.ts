@@ -13,10 +13,13 @@ import type {
   Preferences,
   Project,
   ProjectDetail,
+  PushDevice,
+  RegisterDeviceInput,
   SendMessageInput,
   Share,
   SharedConversation,
   TurnEvent,
+  TurnNotifyResult,
   TurnStarted,
   Usage,
 } from "@open-chat/types";
@@ -42,6 +45,9 @@ export function chatEndpoints(h: Helpers) {
     usage: () => get<Usage>("/me/usage"),
     preferences: () => get<Preferences>("/me/preferences"),
     updatePreferences: (body: Partial<Preferences>) => patch<Preferences>("/me/preferences", body),
+    /** Native apps: register this install for push (call after sign-in and when the token changes). */
+    registerDevice: (body: RegisterDeviceInput) => put<PushDevice>("/me/devices", body),
+    removeDevice: (token: string) => del(`/me/devices/${enc(token)}`),
   };
 
   const chats = {
@@ -75,6 +81,8 @@ export function chatEndpoints(h: Helpers) {
     /** Every event of a turn from `after`, reconnecting through dropped connections, until `done`. */
     follow: (turnId: string, opts?: FollowOptions) => followTurn(http, turnId, opts),
     cancel: (turnId: string) => http.request<void>("POST", `/turns/${enc(turnId)}/cancel`, { keepalive: true }),
+    /** Native apps, going to the background mid-answer: push to my devices when this answer finishes. */
+    notify: (turnId: string) => post<TurnNotifyResult>(`/turns/${enc(turnId)}/notify`, {}),
   };
 
   const files = {

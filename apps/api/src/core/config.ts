@@ -140,6 +140,22 @@ const schema = z.object({
   MODERATION_PROVIDER: z.enum(["none", "openai", "stub"]).default("none"),
 
   /**
+   * Push to the native apps ("your answer is ready"): none (default), fcm (Firebase Cloud
+   * Messaging HTTP v1, which also reaches iOS through APNs) or stub (apps/stubs).
+   */
+  PUSH_PROVIDER: z.enum(["none", "fcm", "stub"]).default("none"),
+  /** The Firebase service account key file, as JSON. Never logged, never returned. */
+  FCM_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  FCM_BASE_URL: z.string().default("https://fcm.googleapis.com"),
+  /** Overrides the service account's token_uri (tests only). */
+  FCM_TOKEN_URL: z.string().optional(),
+  /**
+   * Put the chat title and the start of the answer in the notification. Off by default:
+   * notification text passes through Google (and Apple) and shows on a locked screen.
+   */
+  PUSH_PREVIEW: bool,
+
+  /**
    * Hosts the open_url tool may fetch even though they resolve to a private address.
    * Empty in production. Local development and tests list the stubs host here, nothing else.
    */
@@ -213,6 +229,7 @@ export function assertProductionConfig(c: Config = config): string[] {
   if (c.JOBS_MODE === "inline") problems.push("JOBS_MODE=inline runs background work on the request path");
   if (c.SEARCH_PROVIDER === "stub") problems.push("SEARCH_PROVIDER=stub is a test double");
   if (c.MODERATION_PROVIDER === "stub") problems.push("MODERATION_PROVIDER=stub is a test double");
+  if (c.PUSH_PROVIDER === "stub") problems.push("PUSH_PROVIDER=stub is a test double");
   if (c.FETCH_ALLOW_HOSTS.length) problems.push("FETCH_ALLOW_HOSTS lets open_url reach private addresses; leave it empty in production");
   if (c.BCRYPT_ROUNDS < 12) problems.push("BCRYPT_ROUNDS below 12 weakens stored passwords");
   if (c.NODE_ENV === "production" && problems.length) {
@@ -232,6 +249,7 @@ export function productionWarnings(c: Config = config): string[] {
   if (c.SEARCH_PROVIDER === "tavily" && !isRealKey(c.TAVILY_API_KEY)) warnings.push("SEARCH_PROVIDER=tavily but TAVILY_API_KEY is not set: web search is off");
   if (c.SEARCH_PROVIDER === "exa" && !isRealKey(c.EXA_API_KEY)) warnings.push("SEARCH_PROVIDER=exa but EXA_API_KEY is not set: web search is off");
   if (c.SEARCH_PROVIDER === "brave" && !isRealKey(c.BRAVE_API_KEY)) warnings.push("SEARCH_PROVIDER=brave but BRAVE_API_KEY is not set: web search is off");
+  if (c.PUSH_PROVIDER === "fcm" && !pushEnabled(c)) warnings.push("PUSH_PROVIDER=fcm but FCM_SERVICE_ACCOUNT_JSON is missing or invalid: push is off");
   if (c.MODERATION_PROVIDER === "openai" && !providerKeys(c).openai) warnings.push("MODERATION_PROVIDER=openai needs an openai key: moderation is off");
   return warnings;
 }
@@ -287,6 +305,18 @@ export function searchConfigured(c: Config = config): boolean {
       return isRealKey(c.EXA_API_KEY);
     case "brave":
       return isRealKey(c.BRAVE_API_KEY);
+  }
+}
+
+/** Whether push can be sent: a provider is chosen and, for fcm, the service account parses. */
+export function pushEnabled(c: Config = config): boolean {
+  if (c.PUSH_PROVIDER === "stub") return true;
+  if (c.PUSH_PROVIDER !== "fcm" || !isRealKey(c.FCM_SERVICE_ACCOUNT_JSON)) return false;
+  try {
+    const a = JSON.parse(c.FCM_SERVICE_ACCOUNT_JSON) as Record<string, unknown>;
+    return typeof a.project_id === "string" && typeof a.client_email === "string" && typeof a.private_key === "string";
+  } catch {
+    return false;
   }
 }
 

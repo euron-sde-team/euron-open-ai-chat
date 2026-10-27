@@ -20,3 +20,4 @@ decided, and what it costs. The system as built is described in [HLD.md](../HLD.
 | [0012](0012-no-conversation-text-in-logs.md) | No conversation text in usage rows or log lines |
 | [0013](0013-native-token-mode.md) | Native token mode: mobile apps keep the rotating refresh token themselves (`X-Client: native`) |
 | [0014](0014-floci-for-local-aws.md) | Floci as the local AWS, provisioned by the production Terraform modules |
+| [0015](0015-push-opt-in-per-answer.md) | Push notifications only for an answer the app armed (`POST /api/turns/:id/notify`); generic text by default |

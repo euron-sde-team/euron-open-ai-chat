@@ -119,6 +119,35 @@ variable "moderation_provider" {
   }
 }
 
+# ─── Push notifications ──────────────────────────────────────────────────────
+#
+# "Your answer is ready" on the native apps, through Firebase Cloud Messaging (which
+# reaches iOS through APNs). With push_provider = "fcm" the service account key file goes
+# in <prefix>/push (docs/guides/push.md).
+
+variable "push_provider" {
+  description = "PUSH_PROVIDER: none, or fcm (the Firebase service account goes in <prefix>/push)."
+  type        = string
+  default     = "none"
+  validation {
+    condition     = contains(["none", "fcm"], var.push_provider)
+    error_message = "push_provider must be none or fcm (stub is a test double and refused in production)."
+  }
+}
+
+variable "push_preview" {
+  description = "PUSH_PREVIEW: put the chat title and the start of the answer in the notification. Off by default: the text passes through Google and Apple and shows on a locked screen."
+  type        = bool
+  default     = false
+}
+
+variable "fcm_service_account_json" {
+  description = "Optional FCM_SERVICE_ACCOUNT_JSON, the service account key file as a string (stored in state). Null: \"set-me\" in <prefix>/push, replaced by hand."
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
 # ─── Network ─────────────────────────────────────────────────────────────────
 
 variable "vpc_cidr" {

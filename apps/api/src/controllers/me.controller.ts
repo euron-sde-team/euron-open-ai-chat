@@ -11,6 +11,7 @@ import { appMeta } from "../services/meta.service";
 import { catalog } from "../services/models.service";
 import * as prefs from "../services/preferences.service";
 import * as projects from "../services/project.service";
+import * as push from "../services/push.service";
 import { usageOf } from "../services/quota.service";
 import * as shares from "../services/share.service";
 import * as speech from "../services/speech.service";
@@ -165,4 +166,16 @@ export async function readAloud(req: Request, res: Response) {
   const controller = new AbortController();
   req.on("close", () => controller.abort());
   await speech.readAloud(actorOf(req), parse(idParam, req.params).id, res, controller.signal);
+}
+
+const pushToken = z.string().min(1).max(4096);
+
+export async function registerDevice(req: Request, res: Response) {
+  const body = parse(z.object({ platform: z.enum(["IOS", "ANDROID"]), token: pushToken, appVersion: z.string().max(40).nullish() }).strict(), req.body);
+  res.json(await push.registerDevice(actorOf(req), body));
+}
+
+export async function removeDevice(req: Request, res: Response) {
+  await push.removeDevice(actorOf(req).id, parse(z.object({ token: pushToken }), req.params).token);
+  res.status(204).end();
 }

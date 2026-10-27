@@ -4,7 +4,7 @@ output "secret_arn" {
 }
 
 output "secret_refs" {
-  description = "ECS container `secrets` entries (signing keys, TOTP key, PROVIDER_KEYS and, when enabled, the search keys): [{ name, valueFrom }]."
+  description = "ECS container `secrets` entries (signing keys, TOTP key, PROVIDER_KEYS and, when enabled, the search keys and the FCM service account): [{ name, valueFrom }]."
   value       = local.refs
 }
 
@@ -31,4 +31,9 @@ output "provider_keys_secret_name" {
 output "search_secret_arn" {
   description = "ARN of the <prefix>/search secret, or null when it is not created."
   value       = var.create_search_secret ? aws_secretsmanager_secret.search[0].arn : null
+}
+
+output "push_secret_arn" {
+  description = "ARN of the <prefix>/push secret, or null when it is not created."
+  value       = var.create_push_secret ? aws_secretsmanager_secret.push[0].arn : null
 }

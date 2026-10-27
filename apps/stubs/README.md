@@ -1,12 +1,12 @@
 # @open-chat/stubs
 
 Deterministic stand-ins for every third party the chat talks to: OpenAI-compatible chat,
-Anthropic, Gemini, image generation and edits, transcription, speech, moderation, web search
-and the pages the search links to. One dependency-free Node script (`node:http`,
+Anthropic, Gemini, image generation and edits, transcription, speech, moderation, web search,
+the pages the search links to, and Firebase Cloud Messaging (push). One dependency-free Node script (`node:http`,
 `node:crypto`, `node:zlib`), state in memory, port 5129.
 
 The API runs its real provider adapters against it; only the base URL differs from
-production. A production API with stub search or stub moderation refuses to boot
+production. A production API with stub search, stub moderation or stub push refuses to boot
 (`assertProductionConfig` in `apps/api/src/core/config.ts`), and the starter catalogue only
 adds the stub provider outside production.
 
@@ -21,6 +21,7 @@ Point the API at it:
 STUBS_URL=http://localhost:5129     # providers of kind STUB call this base URL
 SEARCH_PROVIDER=stub                # web_search reads GET /search
 MODERATION_PROVIDER=stub            # prompts containing STUB_FLAG are flagged
+PUSH_PROVIDER=stub                  # push goes to /fcm/token and /v1/projects/<p>/messages:send
 ```
 
 `make dev` and the integration tests set these for you. Providers of kind OPENAI, ANTHROPIC
@@ -77,9 +78,15 @@ summary gets a short title (the first five words of the question) or a fixed sum
 | `GET /search?q=` | results linking to `/pages/:n` on `STUB_PUBLIC_URL` |
 | `GET /pages/:n` | an HTML page for `open_url` to read |
 | `GET /pages/redirect-metadata` | a 302 to `169.254.169.254`, for the SSRF guard test |
+| `POST /fcm/token` | the OAuth JWT bearer grant: checks `grant_type` and that the assertion names an issuer and the `firebase.messaging` scope, then answers an access token (`ya29.stub-...`, 3599 s) |
+| `POST /v1/projects/<p>/messages:send` | FCM HTTP v1 send. Needs a bearer token from `/fcm/token` (else 401). Device tokens starting with `dead` answer 404 `UNREGISTERED`, starting with `bad` (or empty) 400 `INVALID_ARGUMENT`; anything else is recorded and answers `{ name }` |
+| `GET /fcm/messages` | recorded FCM messages, oldest first, at most 500; `?token=` filters by device token |
+| `POST /fcm/reset` | clears the recorded FCM messages |
 | `GET /__/requests` | recorded requests, newest first (bodies, and whether a key was sent) |
 | `POST /__/reset` | clears the record |
 | `GET /up` | health check |
 
 Keys are never checked: any `Authorization` header is accepted and recorded only as
-"present" or "absent".
+"present" or "absent". The FCM routes are the exception: a send needs an access token the
+stub itself issued, so the API's token exchange is exercised; the assertion's signature is
+not verified.

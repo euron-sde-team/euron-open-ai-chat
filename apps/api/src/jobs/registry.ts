@@ -11,7 +11,7 @@ import { config } from "../core/config";
 import { captureError, logger } from "../core/logger";
 import { redisConnection } from "../integrations/redis";
 
-export const QUEUES = ["files", "chat", "maintenance"] as const;
+export const QUEUES = ["files", "chat", "push", "maintenance"] as const;
 export type QueueName = (typeof QUEUES)[number];
 
 export interface JobDefinitions {
@@ -21,6 +21,8 @@ export interface JobDefinitions {
   "chat.title": { conversationId: string; assistantMessageId: string };
   /** Fold turns that no longer fit the context budget into the rolling summary (services/chat/context.ts). */
   "chat.summarize": { conversationId: string };
+  /** "Your answer is ready" to the devices of someone who asked for it (services/push.service.ts). */
+  "push.turn-ready": { userId: string; conversationId: string; messageId: string; ok: boolean };
   "maintenance.expire-files": Record<string, never>;
   "maintenance.lift-suspensions": Record<string, never>;
   /** Erase accounts whose deletion grace period is over. */

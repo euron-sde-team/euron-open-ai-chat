@@ -7,6 +7,7 @@ import { id, idParam, parse } from "../core/validate";
 import { actorOf } from "../middleware/http";
 import { openSse, resumeAfter } from "../middleware/sse";
 import * as chat from "../services/chat/chat.service";
+import { armTurnNotification } from "../services/push.service";
 
 const aspect = z.enum(ASPECT_RATIOS as unknown as [AspectRatio, ...AspectRatio[]]);
 
@@ -119,4 +120,8 @@ export async function events(req: Request, res: Response) {
 export async function cancel(req: Request, res: Response) {
   await chat.cancelTurn(actorOf(req), parse(idParam, req.params).id);
   res.status(204).end();
+}
+
+export async function notify(req: Request, res: Response) {
+  res.json(await armTurnNotification(actorOf(req), parse(idParam, req.params).id));
 }

@@ -23,12 +23,13 @@ apps/api/src/
   services/           business rules, transactions, effects
     chat/             chat.service (conversations, sends, branches), turns (the engine),
                       context, prompt, tools, event-log, titles, summary
-  repositories/       Kysely queries for users, sessions, tokens, chats, files, audit; keyset.ts
+  repositories/       Kysely queries for users, sessions, tokens, chats, files, push devices,
+                      audit; keyset.ts
   presenters/         rows to DTOs from @open-chat/types (chat, file, user), batched
   integrations/       llm/ (openai-chat, anthropic, gemini), images, speech, search,
                       moderation, extract, fetch-page, http (fetch + SSE + failure mapping),
-                      storage (s3 | local), mail, redis
-  jobs/               registry.ts, chat.jobs.ts, maintenance.jobs.ts
+                      storage (s3 | local), mail, redis, push (fcm | stub)
+  jobs/               registry.ts, chat.jobs.ts, push.jobs.ts, maintenance.jobs.ts
   security/           passwords (bcrypt), tokens (JWT, refresh), totp
   middleware/         auth, rate-limit, sse, http helpers
   demo/               catalog.ts (starter providers and models), seed.ts, content.ts
@@ -37,7 +38,7 @@ packages/types        DTOs, enums and the TurnEvent catalogue shared by every cl
 packages/api-client   typed client: refresh, endpoints, uploads, the resumable turn reader
 packages/ui           components and tokens
 apps/stubs            deterministic stand-ins for every third party (local and tests)
-db/                   migrate.ts and migrations/0001_init.sql
+db/                   migrate.ts and migrations/ (0001_init.sql, 0002_push.sql)
 ```
 
 ## 2. Layers and conventions
@@ -223,9 +224,42 @@ Every call starts with `requireAdmin` (`403 FORBIDDEN_ADMIN`).
 is public: app name, tagline, registration mode, feature flags (each one already combined
 with whether the server can actually do it: `webSearch` needs a configured search
 provider, `imageGeneration` an IMAGE model, `dictation` a TRANSCRIBE model, `readAloud` a
-SPEECH model), limits (max file MB of the default tier, files per message, message length,
+SPEECH model, `push` a working push provider), limits (max file MB of the default tier, files per message, message length,
 accepted MIME types), the support email and `minSupportedVersion`. Never a key or a
 provider name.
+
+### 4.12 Push
+
+[`services/push.service.ts`](../../apps/api/src/services/push.service.ts),
+[`repositories/push-device.repository.ts`](../../apps/api/src/repositories/push-device.repository.ts),
+[`integrations/push/`](../../apps/api/src/integrations/push/index.ts),
+[`jobs/push.jobs.ts`](../../apps/api/src/jobs/push.jobs.ts).
+"Your answer is ready" for the native apps, armed per answer
+([ADR 0015](adr/0015-push-opt-in-per-answer.md), [push.md](../guides/push.md)).
+
+| Route | Rules |
+| --- | --- |
+| `PUT /api/me/devices` | `{ platform, token, appVersion? }` (strict). Upserts by token: a token another account registered moves to the caller. Answers `PushDevice` (never the token) |
+| `DELETE /api/me/devices/:token` | Deletes the caller's own row only; 204 either way, so it reveals nothing about other accounts |
+| `POST /api/turns/:id/notify` | `409 PUSH_DISABLED` without a provider; `404 TURN_NOT_FOUND` unless the id is the caller's assistant message; `{ state: "finished" }` when it is no longer `STREAMING`; else sets `turn:<id>:notify` (one hour) and answers `{ state: "armed" }`. A second read after the `SET` catches a turn that ended in between: the key is deleted and the answer is `finished` |
+| `POST /api/auth/logout` (native) | An optional `deviceToken` in the body deletes that device for the account the refresh token names |
+
+- `afterTurn` runs in [`turns.ts`](../../apps/api/src/services/chat/turns.ts) after `done`:
+  one `GETDEL` of the key. Present and not `CANCELLED`: queue `push.turn-ready` with
+  `ok = status === "COMPLETE"`. Errors are captured, never thrown into the turn.
+- `sendTurnReady` (the job) sends one message per device. Title: the app name; body:
+  "Your answer is ready." or "Your answer could not be finished. Open the chat to try
+  again." With `PUSH_PREVIEW`, the chat title and the first 120 characters of the answer.
+  Data: `type: "turn"`, `conversationId`, `messageId`. Tokens reported dead are deleted;
+  other failures log the device id and FCM status, never the text.
+- Providers ([`integrations/push/index.ts`](../../apps/api/src/integrations/push/index.ts)):
+  `none` (default), `fcm` (FCM HTTP v1 with `FCM_SERVICE_ACCOUNT_JSON`; a JWT signed with
+  `node:crypto` is traded for an access token cached until a minute before expiry) and
+  `stub` (the same client against `apps/stubs` with a key generated at boot; refused in
+  production). `UNREGISTERED`, `INVALID_ARGUMENT` and a 404 `NOT_FOUND` mean a dead token.
+- `revokeAllForUser` in
+  [`repositories/session.repository.ts`](../../apps/api/src/repositories/session.repository.ts)
+  deletes the account's devices with its sessions.
 
 ## 5. The pure domain functions
 
@@ -246,7 +280,7 @@ segment of the name. Defaults: 5 attempts with exponential backoff from 5 s.
 
 | | `JOBS_MODE=queue` (default, every deployment) | `JOBS_MODE=inline` (tests, tiny installs) |
 | --- | --- | --- |
-| Where handlers run | The worker process (concurrency: files 4, chat 8, maintenance 2) | The API process, right after commit |
+| Where handlers run | The worker process (concurrency: files 4, chat 8, push 2, maintenance 2) | The API process, right after commit |
 | Retries | 5 attempts | None: an error is logged and swallowed |
 | Scheduled jobs | Registered by every worker, one schedule each | None |
 | Production guard | OK | Refused by `assertProductionConfig` |

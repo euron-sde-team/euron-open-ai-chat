@@ -2,8 +2,8 @@
 
 How to build a ChatGPT-like iOS or Android app (React Native, or any native stack) against
 this API: sessions, the shared contract packages, streaming answers that survive the app
-going to the background, uploads with progress, feature flags and forced updates, voice, and
-what is not there yet. The full event catalogue is in [../api/streaming.md](../api/streaming.md);
+going to the background, push notifications, uploads with progress, feature flags and forced
+updates, and voice. The full event catalogue is in [../api/streaming.md](../api/streaming.md);
 every route in [../api/rest-contract.md](../api/rest-contract.md).
 
 The API has no mobile-only endpoints: the web app and a phone call the same routes. Two
@@ -175,6 +175,59 @@ answer before the question you edit, or `null` for the first question) makes a s
 question. `Message.siblingIds` lists the versions for a `< 2/3 >` control and
 `PUT /api/chats/:id/leaf { messageId }` switches the branch on screen.
 
+## Push notifications
+
+The server can tell the app "your answer is ready" when an answer finishes while the app is
+in the background ([ADR 0015](../architecture/adr/0015-push-opt-in-per-answer.md)). It
+sends nothing on its own: the app arms each answer it wants to hear about. The web app
+never arms, so a push only happens for a phone that left an answer running. Turning push on
+for a server is in [push.md](push.md).
+
+Push uses Firebase Cloud Messaging on both platforms (iOS through APNs). The app gets an
+FCM registration token from the Firebase SDK, for example `@react-native-firebase/messaging`.
+The Firebase files that go inside the app are covered in the `euron-open-ai-chat-app` docs.
+
+| When | Call |
+| --- | --- |
+| After sign-in, and whenever the FCM token refreshes (`onTokenRefresh`) | `api.me.registerDevice({ platform: "IOS" \| "ANDROID", token, appVersion })`, `PUT /api/me/devices`. Answers `PushDevice` (without the token). Only when `features.push` is true and the user allowed notifications |
+| `AppState` goes to `background` while an answer is streaming | `api.turns.notify(turnId)`, `POST /api/turns/:id/notify`. Answers `{ state: "armed" }` or `{ state: "finished" }` |
+| The user turns notifications off in the app | `api.me.removeDevice(token)`, `DELETE /api/me/devices/:token`. 204 |
+| Sign-out | `api.auth.logout(token)`: the native body carries `deviceToken`, so this device stops receiving pushes |
+
+```ts
+AppState.addEventListener("change", async (next) => {
+  if (next !== "background" || !streamingTurnId) return;
+  controller.abort(); // stop following; the turn keeps running
+  if (!meta.features.push) return;
+  try {
+    const { state } = await api.turns.notify(streamingTurnId);
+    // "finished": the answer ended before the call. No push will come; the resume flow
+    // above collects it on the next foreground.
+  } catch {
+    // 409 PUSH_DISABLED (the server turned push off) or a network error: nothing to do.
+  }
+});
+```
+
+Rules for the app:
+
+- Arm only an answer that is still streaming, and only when going to the background. An
+  answer the user is watching must not cause a push.
+- `finished` is not an error: the answer is already complete, so follow or reload it.
+- A cancelled answer sends nothing. A failed one sends "Your answer could not be
+  finished."
+- The notification text is generic ("Your answer is ready.") unless the operator turned on
+  `PUSH_PREVIEW`. Do not depend on its text.
+- The data payload has `type: "turn"`, `conversationId` and `messageId` (strings). On a tap,
+  check `data.type === "turn"` and open the chat `data.conversationId`; the resume flow then
+  shows the answer. Ignore types you do not know.
+- A token belongs to one account at a time: registering it after another account signed in
+  on the same phone moves it to the new account.
+- Ending every session (sign out everywhere, a password change or reset, a ban, account
+  deletion) removes all of the account's devices. Register again after the next sign-in.
+- A token FCM reports as dead is deleted by the server; the next `onTokenRefresh` or launch
+  registers the new one.
+
 ## Uploads with progress
 
 Files go straight to storage with a presigned URL; the app only ever handles file ids
@@ -212,6 +265,7 @@ Call `GET /api/meta` (public, cached 30 s) at launch and on foreground:
 | `appName`, `tagline`, `support.email` | Branding and the help screen |
 | `registration` | `OPEN`, `INVITE_ONLY` or `CLOSED`: hide or explain sign-up |
 | `features.webSearch`, `imageGeneration`, `dictation`, `readAloud`, `memory`, `projects`, `sharing` | Show only what the server can serve (a feature is true only when the admin turned it on and the backing provider or model exists) |
+| `features.push` | The server can send push notifications. When false, do not ask for notification permission or register a device |
 | `limits` | Composer limits: `maxMessageChars` (32,000), files and types |
 | `minSupportedVersion` | `x.y.z` or null. When your app's version is lower, show a blocking "Update the app" screen with a store link before anything else |
 
@@ -239,15 +293,6 @@ an `error` event with one of seven codes (`QUOTA_EXCEEDED`, `MODEL_UNAVAILABLE`,
 `PROVIDER_ERROR`, `PROVIDER_RATE_LIMITED`, `CONTEXT_TOO_LONG`, `CONTENT_BLOCKED`, `INTERNAL`)
 and a message that is safe to show. `429 RATE_LIMITED` carries `Retry-After`.
 
-## Not there yet: push notifications
-
-The API has no push support today: no device registration table, no FCM or APNs sender. A
-long answer that finishes while the app is in the background is collected on the next
-foreground through the resume flow above. Push ("your answer is ready", "your image is
-done") is on the roadmap; it would register device tokens per session and send after a turn
-completes, outside the turn's critical path. The route comment on `POST /api/auth/logout`
-mentions a `deviceToken`; the current schema does not accept that field.
-
 ## A checklist
 
 - `X-Client: native` on auth calls; refresh token in the keystore only.
@@ -257,4 +302,6 @@ mentions a `deviceToken`; the current schema does not accept that field.
   on foreground; follow `activeTurnId` after a cold start.
 - Uploads through `files.upload` with `onProgress`; only file ids in messages.
 - `GET /api/meta` at launch: features, limits, `minSupportedVersion`.
+- With `features.push`: register the FCM token after sign-in and on refresh, `turns.notify`
+  on background mid-answer, `deviceToken` on logout, open `data.conversationId` on a tap.
 - Never log message text, tokens or file URLs (signed URLs expire, but still).

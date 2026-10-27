@@ -31,7 +31,13 @@ export class SessionRepository {
     return exec.updateTable("sessions").set({ revoked_at: new Date() }).where("family_id", "=", familyId).where("revoked_at", "is", null).execute();
   }
 
-  revokeAllForUser(userId: string, exec: Executor = db) {
+  /**
+   * End every session of a user. Their push devices go too: a device nobody is signed in
+   * on must not be told about answers (sign out everywhere, password change or reset,
+   * ban, deletion all come through here).
+   */
+  async revokeAllForUser(userId: string, exec: Executor = db) {
+    await exec.deleteFrom("push_devices").where("user_id", "=", userId).execute();
     return exec.updateTable("sessions").set({ revoked_at: new Date() }).where("user_id", "=", userId).where("revoked_at", "is", null).execute();
   }
 

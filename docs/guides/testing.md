@@ -19,7 +19,7 @@ Vitest in every package (`pnpm test` runs them all through Turborepo):
 
 | Package | Tests | Covers |
 | --- | --- | --- |
-| `apps/api` | [`test/unit`](../../apps/api/test/unit) | `llm-adapters` (OpenAI-compatible, Anthropic and Gemini stream parsing: text, reasoning, fragmented tool calls, usage, finish reasons), `http` (the SSE reader across chunk boundaries, failure classification, key masking), `chat-context` (token budget, vision on the last two user messages, document share, summary on the right branch only), `chat-helpers` (titles, argument parsing, error codes), `net-guard` (every private, link-local, CGNAT and IPv4-in-IPv6 range), `file-rules` (allowlist, extension match, magic bytes), `chunking`, `display-name`, `username`, `hardening`, `logger-redaction` (secrets and conversation fields) |
+| `apps/api` | [`test/unit`](../../apps/api/test/unit) | `llm-adapters` (OpenAI-compatible, Anthropic and Gemini stream parsing: text, reasoning, fragmented tool calls, usage, finish reasons), `http` (the SSE reader across chunk boundaries, failure classification, key masking), `chat-context` (token budget, vision on the last two user messages, document share, summary on the right branch only), `chat-helpers` (titles, argument parsing, error codes), `net-guard` (every private, link-local, CGNAT and IPv4-in-IPv6 range), `file-rules` (allowlist, extension match, magic bytes), `chunking`, `display-name`, `username`, `hardening`, `logger-redaction` (secrets and conversation fields), `push` (service account parsing, the RS256 JWT assertion, the FCM message shape and dead-token detection, push configuration and the production guard) |
 | `apps/web` | [`test`](../../apps/web/test) | The turn runner applying events to the cache, markdown rendering, the CSP builder, session and refresh, errors, the auth forms, the admin pages and charts |
 | `packages/api-client` | [`test`](../../packages/api-client/test) | Single-flight refresh, pagination, uploads with progress, `followTurn` (SSE parsing, reconnecting after a drop with `after`, the XHR transport) |
 | `packages/ui` | [`test`](../../packages/ui/test) | Components |
@@ -78,6 +78,7 @@ What the suites cover, by file:
 | `admin.int.test.ts` | Who may open `/admin`, accounts, tiers, providers and models, settings, integrations, stats, shares, the audit trail |
 | `auth.int.test.ts`, `native-auth.int.test.ts`, `account.int.test.ts` | Sign-up and verification, sign-in throttling, sessions and rotation, password reset, two-factor; native token mode; export and deletion |
 | `hardening.int.test.ts` | The error envelope, headers and CORS, authentication failures, id and cursor validation, user text never becoming query syntax, rate limits |
+| `push.int.test.ts` | Push devices (strict bodies, a token moving between accounts, delete only your own, removal on native sign-out and sign out everywhere) and arming: one push per device with generic text, nothing without arming, nothing for a finished or cancelled answer, a failed answer says so, 404 for another user's turn, 409 without a provider, dead tokens removed |
 | `images-speech.int.test.ts`, `me.int.test.ts` | The image studio and gallery, dictation, read aloud; `/api/meta`, `/api/models`, preferences, memories, projects |
 
 ### The provider key canary
@@ -96,8 +97,10 @@ change that echoes a key anywhere fails here.
 OpenAI-compatible chat (streaming and not, tool calls, vision), Anthropic Messages, Gemini
 `streamGenerateContent` and `generateContent`, image generation and edits (a real PNG),
 transcription and speech (a short WAV), moderation (flags input containing `STUB_FLAG`), a
-search endpoint, and HTML pages to read, including `/pages/redirect-metadata`, a redirect to
-`169.254.169.254` for the SSRF test.
+search endpoint, HTML pages to read, including `/pages/redirect-metadata`, a redirect to
+`169.254.169.254` for the SSRF test, and FCM (`/fcm/token`, `messages:send`, the record at
+`GET /fcm/messages`; tokens starting with `dead` or `bad` are refused as FCM would). The
+integration suite runs with `PUSH_PROVIDER=stub`.
 
 The stub model decides from words in the last user message:
 

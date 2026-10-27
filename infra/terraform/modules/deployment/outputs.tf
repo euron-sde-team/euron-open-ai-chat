@@ -89,3 +89,8 @@ output "search_secret_name" {
   description = "Secrets Manager name holding the hosted search keys (replace the one for search_provider), or null when search_provider is none or searxng."
   value       = local.with_search_secret ? "${var.name_prefix}/search" : null
 }
+
+output "push_secret_name" {
+  description = "Secrets Manager name holding FCM_SERVICE_ACCOUNT_JSON (replace \"set-me\" with the key file), or null when push_provider is none."
+  value       = local.with_push_secret ? "${var.name_prefix}/push" : null
+}

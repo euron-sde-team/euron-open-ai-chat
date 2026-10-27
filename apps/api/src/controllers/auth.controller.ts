@@ -15,6 +15,7 @@ import { parse } from "../core/validate";
 import { USERNAME_PATTERN } from "../domain/username";
 import { actorOf, meta } from "../middleware/http";
 import * as auth from "../services/auth.service";
+import { removeDevice } from "../services/push.service";
 import type { IssuedSession } from "../services/auth.service";
 
 export const REFRESH_COOKIE = "chat_refresh";
@@ -120,8 +121,10 @@ export async function refresh(req: Request, res: Response) {
 /** Native: `{ refreshToken }`. */
 export async function logout(req: Request, res: Response) {
   if (isNative(req)) {
-    const body = parse(z.object({ refreshToken }).strict(), req.body);
-    await auth.logout(body.refreshToken);
+    const body = parse(z.object({ refreshToken, deviceToken: z.string().min(1).max(4096).optional() }).strict(), req.body);
+    const userId = await auth.logout(body.refreshToken);
+    // The refresh token names the account; the app names its device.
+    if (userId && body.deviceToken) await removeDevice(userId, body.deviceToken);
     res.status(204).end();
     return;
   }

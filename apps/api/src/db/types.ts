@@ -215,6 +215,16 @@ export interface Providers {
   updated_at: Generated<Timestamp>;
 }
 
+export interface PushDevices {
+  app_version: string | null;
+  created_at: Generated<Timestamp>;
+  id: string;
+  last_seen_at: Generated<Timestamp>;
+  platform: string;
+  token: string;
+  user_id: string;
+}
+
 export interface QuotaTiers {
   created_at: Generated<Timestamp>;
   daily_images: number | null;
@@ -343,6 +353,7 @@ export interface DB {
   project_files: ProjectFiles;
   projects: Projects;
   providers: Providers;
+  push_devices: PushDevices;
   quota_tiers: QuotaTiers;
   schema_migrations: SchemaMigrations;
   sessions: Sessions;

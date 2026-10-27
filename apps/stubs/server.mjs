@@ -1,4 +1,4 @@
-/* global process, Buffer, URL, console, setTimeout */
+/* global process, Buffer, URL, URLSearchParams, console, setTimeout */
 /**
  * Deterministic stand-ins for every third party the chat talks to, in one
  * dependency-free Node process (node:http, node:zlib, node:crypto). Development, CI and
@@ -16,6 +16,10 @@
  *   Search             GET /search?q= (results that link to the pages below)
  *   Pages              GET /pages/:n (HTML to read), /pages/redirect-metadata (a redirect
  *                      to 169.254.169.254, for the SSRF test)
+ *   FCM                POST /fcm/token (the JWT bearer grant) and
+ *                      POST /v1/projects/<p>/messages:send, recording every message for
+ *                      GET /fcm/messages; device tokens starting with "dead" answer
+ *                      UNREGISTERED, "bad" INVALID_ARGUMENT
  *
  * How the model decides, so tests can steer it with words in the last user message:
  *   "search", "latest", "news", "look up"   calls web_search (when offered)
@@ -198,6 +202,15 @@ function decide({ system, lastUser, images, tools, toolResult }) {
   return { text: `This is a stub answer to: "${lastUser.slice(0, 120)}". It has **bold** text and a list:\n\n- one\n- two` };
 }
 
+/** The claims of a JWT, unverified (the stub only checks their shape). */
+function jwtClaims(jwt) {
+  try {
+    return JSON.parse(Buffer.from(String(jwt).split(".")[1] ?? "", "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
 const piecesOf = (text) => text.match(/.{1,12}(\s|$)|\S+/gs) ?? [text];
 
 function openAiView(body) {
@@ -339,7 +352,7 @@ function page(n) {
 export function createStubs(options = {}) {
   const port = Number(options.port ?? process.env.PORT ?? 5129);
   const config = { publicUrl: options.publicUrl ?? process.env.STUB_PUBLIC_URL ?? `http://localhost:${port}` };
-  const state = { requests: [] };
+  const state = { requests: [], fcm: { tokens: new Set(), messages: [] } };
 
   async function handler(req, res) {
     const url = new URL(req.url ?? "/", "http://stub");
@@ -347,7 +360,13 @@ export function createStubs(options = {}) {
     try {
       const raw = req.method === "POST" || req.method === "PUT" ? await readBody(req) : Buffer.alloc(0);
       const type = req.headers["content-type"] ?? "";
-      const body = type.includes("application/json") && raw.length ? JSON.parse(raw.toString("utf8")) : {};
+      const body = !raw.length
+        ? {}
+        : type.includes("application/json")
+          ? JSON.parse(raw.toString("utf8"))
+          : type.includes("application/x-www-form-urlencoded")
+            ? Object.fromEntries(new URLSearchParams(raw.toString("utf8")))
+            : {};
       if (!p.startsWith("/__/") && p !== "/up") {
         state.requests.unshift({ method: req.method, path: p, at: new Date().toISOString(), body: type.includes("json") ? body : null, headers: { authorization: req.headers.authorization ? "present" : "absent" } });
         state.requests.length = Math.min(state.requests.length, 200);
@@ -387,6 +406,8 @@ export function createStubs(options = {}) {
         return send(res, 200, { results: [{ flagged, categories: { harassment: flagged } }] });
       }
 
+      if (p.startsWith("/fcm/") || /^\/v1\/projects\//.test(p)) return fcm(req, res, url, body);
+
       if (p === "/search") return send(res, 200, { results: searchResults(config.publicUrl, url.searchParams.get("q") ?? "") });
       if (p === "/pages/redirect-metadata") return res.writeHead(302, { Location: "http://169.254.169.254/latest/meta-data/" }), res.end();
       const pm = /^\/pages\/(\d+)$/.exec(p);
@@ -396,6 +417,40 @@ export function createStubs(options = {}) {
     } catch (err) {
       if (!res.headersSent) send(res, 500, { error: { message: String(err?.message ?? err) } });
     }
+  }
+
+  function fcm(req, res, url, body) {
+    const p = url.pathname;
+    let x;
+    if (p === "/fcm/token" && req.method === "POST") {
+      const claims = jwtClaims(body.assertion);
+      if (body.grant_type !== "urn:ietf:params:oauth:grant-type:jwt-bearer" || !claims?.iss || !String(claims.scope ?? "").includes("firebase.messaging")) return send(res, 400, { error: "invalid_grant", error_description: "Invalid JWT" });
+      const token = `ya29.stub-${randomBytes(15).toString("hex")}`;
+      state.fcm.tokens.add(token);
+      return send(res, 200, { access_token: token, expires_in: 3599, token_type: "Bearer" });
+    }
+    if ((x = p.match(/^\/v1\/projects\/([\w.-]+)\/messages:send$/)) && req.method === "POST") {
+      const auth = String(req.headers.authorization ?? "");
+      if (!auth.startsWith("Bearer ") || !state.fcm.tokens.has(auth.slice(7))) return send(res, 401, { error: { code: 401, status: "UNAUTHENTICATED", message: "Request had invalid authentication credentials." } });
+      const message = body.message ?? {};
+      const target = String(message.token ?? "");
+      const fcmError = (code) => ({ "@type": "type.googleapis.com/google.firebase.fcm.v1.FcmError", errorCode: code });
+      if (!target || target.startsWith("bad")) return send(res, 400, { error: { code: 400, status: "INVALID_ARGUMENT", message: "The registration token is not a valid FCM registration token", details: [fcmError("INVALID_ARGUMENT")] } });
+      if (target.startsWith("dead")) return send(res, 404, { error: { code: 404, status: "NOT_FOUND", message: "Requested entity was not found.", details: [fcmError("UNREGISTERED")] } });
+      const name = `projects/${x[1]}/messages/0:${randomBytes(8).toString("hex")}`;
+      state.fcm.messages.push({ name, project: x[1], message, at: new Date().toISOString() });
+      if (state.fcm.messages.length > 500) state.fcm.messages.shift();
+      return send(res, 200, { name });
+    }
+    if (p === "/fcm/messages" && req.method === "GET") {
+      const token = url.searchParams.get("token");
+      return send(res, 200, { messages: state.fcm.messages.filter((m) => !token || m.message.token === token) });
+    }
+    if (p === "/fcm/reset" && req.method === "POST") {
+      state.fcm.messages.length = 0;
+      return send(res, 200, { ok: true });
+    }
+    return send(res, 404, { error: { message: `no stub for ${req.method} ${p}` } });
   }
 
   return { handler, config, state };

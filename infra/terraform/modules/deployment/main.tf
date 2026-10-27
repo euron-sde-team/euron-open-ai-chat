@@ -13,7 +13,8 @@
 # uncompressed and uncached.
 #
 # Model provider keys come from one secret, <prefix>/provider-keys (PROVIDER_KEYS);
-# the hosted search keys, when a hosted search provider is chosen, from <prefix>/search.
+# the hosted search keys, when a hosted search provider is chosen, from <prefix>/search;
+# the Firebase service account, with push_provider = "fcm", from <prefix>/push.
 #
 # One origin keeps the refresh cookie first-party and needs no CORS for the app itself.
 # Plus two one-off task definitions on the api image: migrate and admin (bootstrap
@@ -43,6 +44,8 @@ locals {
   # The hosted search providers read their key from <prefix>/search (a plain variable,
   # so the decision is known at plan time). SearXNG needs only a URL.
   with_search_secret = contains(["tavily", "exa", "brave"], var.search_provider)
+  # Push to the native apps reads the Firebase service account from <prefix>/push.
+  with_push_secret = var.push_provider == "fcm"
 }
 
 # ─── Foundation ──────────────────────────────────────────────────────────────
@@ -76,6 +79,9 @@ module "secrets" {
   tavily_api_key       = var.tavily_api_key
   exa_api_key          = var.exa_api_key
   brave_api_key        = var.brave_api_key
+
+  create_push_secret       = local.with_push_secret
+  fcm_service_account_json = var.fcm_service_account_json
 }
 
 module "database" {
@@ -223,6 +229,8 @@ locals {
     DATA_DIR                   = "/tmp/data"
     SEARCH_PROVIDER            = var.search_provider
     MODERATION_PROVIDER        = var.moderation_provider
+    PUSH_PROVIDER              = var.push_provider
+    PUSH_PREVIEW               = tostring(var.push_preview)
     MIGRATE_ON_BOOT            = tostring(var.migrate_on_boot)
     MIGRATIONS_DIR             = "/app/db/migrations"
     DB_POOL_MAX                = tostring(var.db_pool_max)
@@ -245,7 +253,8 @@ locals {
   }, var.api_extra_environment)
 
   # JWT_SECRET, REFRESH_SECRET, TOTP_ENCRYPTION_KEY, PROVIDER_KEYS, REDIS_URL and, with
-  # a hosted search provider, TAVILY_API_KEY, EXA_API_KEY and BRAVE_API_KEY.
+  # a hosted search provider, TAVILY_API_KEY, EXA_API_KEY and BRAVE_API_KEY, and with
+  # push_provider = "fcm", FCM_SERVICE_ACCOUNT_JSON.
   api_secrets = concat(module.secrets.secret_refs, module.cache.secret_refs, var.api_extra_secrets)
 
   # One-off tasks need the database; migrate nothing else (no signing keys, no cache,

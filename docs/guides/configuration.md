@@ -129,6 +129,23 @@ A provider with no key is simply not offered, except kinds that need none: `STUB
 | `FETCH_ALLOW_HOSTS` | empty | Hosts the `open_url` tool may reach even though they resolve to a private address. Compose sets `stubs`, the tests `127.0.0.1`. Production refuses any value ([tools-and-safety.md](../architecture/tools-and-safety.md)) |
 | `MODERATION_PROVIDER` | `none` | `none`, `openai` (the moderation endpoint, needs an `openai` key) or `stub` (flags input containing `STUB_FLAG`). Fails open on an outage. Production refuses `stub` |
 
+### Push notifications
+
+"Your answer is ready" on the native apps, sent only for an answer the app armed
+([push.md](push.md), [ADR 0015](../architecture/adr/0015-push-opt-in-per-answer.md)). The
+API and the worker both read these.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PUSH_PROVIDER` | `none` | `none`, `fcm` (Firebase Cloud Messaging HTTP v1, which also reaches iOS through APNs) or `stub` (the same client against `apps/stubs`, messages recorded at `GET {STUBS_URL}/fcm/messages`). Production refuses `stub` |
+| `FCM_SERVICE_ACCOUNT_JSON` | unset | The Firebase service account key file, as one JSON string (`project_id`, `client_email`, `private_key`). A secret: never logged or returned. Missing, `set-me` or unparseable turns push off with a warning. On AWS it is the whole `<name_prefix>/push` secret |
+| `PUSH_PREVIEW` | `false` | Put the chat title and the first 120 characters of the answer in the notification. Off by default: the text passes through Google and Apple and shows on a locked screen |
+| `FCM_BASE_URL` | `https://fcm.googleapis.com` | The FCM API origin. Tests only |
+| `FCM_TOKEN_URL` | unset (the key file's `token_uri`) | The OAuth token endpoint. Tests only |
+
+`GET /api/meta` reports `features.push: true` only when a provider is chosen and, for `fcm`,
+the service account parses.
+
 ### Demo seed
 
 | Variable | Default | Purpose |
@@ -151,13 +168,14 @@ refuses to start and lists them all:
 | `STORAGE=local`, or `STORAGE=s3` without `S3_BUCKET` | Files on a container disk vanish with the task |
 | `MAIL_MODE=outbox`, or no `MAIL_FROM` | Mail would never leave |
 | `JOBS_MODE=inline` | Background work on the request path, no schedules |
-| `SEARCH_PROVIDER=stub`, `MODERATION_PROVIDER=stub` | Test doubles |
+| `SEARCH_PROVIDER=stub`, `MODERATION_PROVIDER=stub`, `PUSH_PROVIDER=stub` | Test doubles |
 | `FETCH_ALLOW_HOSTS` set | Lets `open_url` reach private addresses |
 | `BCRYPT_ROUNDS` below 12 | Weak password hashes |
 
 `productionWarnings` lists what must not stop a deployment (an admin has to be able to sign
-in and fix it): no provider key at all, a search provider without its URL or key, and
-`MODERATION_PROVIDER=openai` without an `openai` key. The admin's Settings page also shows
+in and fix it): no provider key at all, a search provider without its URL or key,
+`MODERATION_PROVIDER=openai` without an `openai` key, and `PUSH_PROVIDER=fcm` without a
+valid `FCM_SERVICE_ACCOUNT_JSON`. The admin's Settings page also shows
 `GET /api/admin/integrations` (search, moderation, speech, mail and storage mode, never a
 key).
 
@@ -197,7 +215,8 @@ one. The compose files map them onto the API variables above.
 | `CHAT_SEARXNG_PORT` | `8089` | SearXNG |
 
 Provider and search keys (`PROVIDER_KEYS`, `OPENAI_API_KEY`, ..., `SEARCH_PROVIDER`,
-`TAVILY_API_KEY`, ...) can be added to the same `.env` by hand; see the commented examples in
+`TAVILY_API_KEY`, ...) and the push settings (`PUSH_PROVIDER`, `FCM_SERVICE_ACCOUNT_JSON`,
+`PUSH_PREVIEW`) can be added to the same `.env` by hand; see the commented examples in
 [`deploy/compose/.env.example`](../../deploy/compose/.env.example). `make up-aws` also reads
 `deploy/compose/.env.aws` ([`.env.aws.example`](../../deploy/compose/.env.aws.example)).
 
@@ -240,10 +259,12 @@ Quota tiers and per-user overrides are not settings; they have their own tables 
 [`infra/terraform/modules/deployment/main.tf`](../../infra/terraform/modules/deployment/main.tf)
 composes the task environment: `NODE_ENV=production`, `APP_WEB_URL` and `CORS_ORIGINS` from
 `domain`, `TRUST_PROXY` 1 or 2 (with the CDN), `STORAGE=s3`, `MAIL_MODE=ses`,
-`DATABASE_SECRET_ARN` and the `DB_*` values, and the search and moderation choices from
+`DATABASE_SECRET_ARN` and the `DB_*` values, and the search, moderation and push choices
+(`PUSH_PROVIDER` from `push_provider`, `PUSH_PREVIEW` from `push_preview`) from
 `terraform.tfvars`. Secrets are injected by ECS from Secrets Manager: `JWT_SECRET` and
 `REFRESH_SECRET` (`<name_prefix>/app`), `TOTP_ENCRYPTION_KEY` (`<name_prefix>/totp`),
 `PROVIDER_KEYS` (`<name_prefix>/provider-keys`), `REDIS_URL` (the cache module's secret) and,
 with a hosted search provider, `TAVILY_API_KEY`, `EXA_API_KEY`, `BRAVE_API_KEY`
-(`<name_prefix>/search`). `api_extra_environment` and `api_extra_secrets` add anything else.
+(`<name_prefix>/search`) and, with `push_provider = "fcm"`, `FCM_SERVICE_ACCOUNT_JSON`
+(`<name_prefix>/push`). `api_extra_environment` and `api_extra_secrets` add anything else.
 See [deploy-aws.md](deploy-aws.md).
