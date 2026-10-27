@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" role="img" aria-labelledby="title desc">
+  <title id="title">Euron Open AI Chat in context</title>
+  <desc id="desc">People and admins use one web app; mobile clients call the API directly with native token mode. The system is a Next.js web app, an Express API, a BullMQ worker, PostgreSQL 16 and Redis 7, which holds turn event streams, quota counters, rate limits and job queues. The API calls model providers (OpenAI, Anthropic, Gemini and OpenAI-compatible endpoints such as Groq, OpenRouter and Ollama), a web search provider (SearXNG, Tavily, Exa or Brave), public web pages through the SSRF guard of the open_url tool, a private S3 bucket, a mail transport (SES or SMTP) and an optional moderation endpoint. File bytes go from the browser straight to S3 with presigned URLs, and provider keys come only from the environment or Secrets Manager.</desc>
+  <style>
+    .bg { fill: #f8fafc; }
+    .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.2; }
+    .acc { fill: #ecfafc; stroke: #0E99AD; stroke-width: 1.6; }
+    .zone { fill: none; stroke: #94a3b8; stroke-width: 1.2; stroke-dasharray: 6 5; }
+    .h { font: 600 20px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+    .t { font: 600 15px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+    .s { font: 13px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #475569; }
+    .m { font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #0f172a; }
+    .k { font: 600 13px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #0b7f90; }
+    .ln { stroke: #64748b; stroke-width: 1.5; fill: none; }
+    .ld { stroke: #64748b; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .la { stroke: #0E99AD; stroke-width: 1.8; fill: none; }
+    .ah { fill: #64748b; }
+    .aa { fill: #0E99AD; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0b1220; }
+      .box { fill: #111a2b; stroke: #2b3a55; }
+      .acc { fill: #0d2a33; stroke: #22b8cc; }
+      .zone { stroke: #475569; }
+      .h, .t, .m { fill: #e2e8f0; }
+      .s { fill: #94a3b8; }
+      .k { fill: #5fd3e3; }
+      .ln, .ld { stroke: #7c8aa5; }
+      .ah { fill: #7c8aa5; }
+      .la { stroke: #22b8cc; }
+      .aa { fill: #22b8cc; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="aa" d="M0 0L10 5L0 10z"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="680" rx="14"/>
+  <text class="h" x="40" y="48">Euron Open AI Chat in context</text>
+  <text class="s" x="40" y="72">One organisation per deployment. Everyone uses the same web app or a native client; admins never read conversations.</text>
+
+  <!-- People -->
+  <rect class="box" x="40" y="110" width="240" height="64" rx="10"/>
+  <text class="t" x="56" y="136">Members</text>
+  <text class="s" x="56" y="157">chat, files, projects, images</text>
+  <rect class="box" x="40" y="190" width="240" height="64" rx="10"/>
+  <text class="t" x="56" y="216">Admins</text>
+  <text class="s" x="56" y="237">/admin: users, models, quotas</text>
+  <rect class="box" x="40" y="270" width="240" height="64" rx="10"/>
+  <text class="t" x="56" y="296">Mobile clients</text>
+  <text class="s" x="56" y="317">X-Client: native, SSE over xhr</text>
+  <rect class="box" x="40" y="350" width="240" height="64" rx="10"/>
+  <text class="t" x="56" y="376">Operator</text>
+  <text class="s" x="56" y="397">Terraform, make, CLI</text>
+  <rect class="box" x="40" y="430" width="240" height="64" rx="10"/>
+  <text class="t" x="56" y="456">Anyone with a link</text>
+  <text class="s" x="56" y="477">frozen shared snapshot</text>
+  <path class="ln" d="M280 142 L468 220" marker-end="url(#a)"/>
+  <path class="ln" d="M280 222 L468 260" marker-end="url(#a)"/>
+  <path class="ln" d="M280 302 L468 300" marker-end="url(#a)"/>
+  <path class="ld" d="M280 382 L468 340" marker-end="url(#a)"/>
+  <path class="ln" d="M280 462 L468 380" marker-end="url(#a)"/>
+
+  <!-- System -->
+  <rect class="acc" x="470" y="170" width="270" height="270" rx="14"/>
+  <text class="t" x="486" y="196">Euron Open AI Chat</text>
+  <text class="s" x="486" y="217">web app (Next.js)</text>
+  <text class="s" x="486" y="237">API (Express, Kysely)</text>
+  <text class="s" x="486" y="257">worker (BullMQ jobs)</text>
+  <text class="s" x="486" y="277">PostgreSQL 16</text>
+  <text class="s" x="486" y="297">Redis 7: turn streams, quotas,</text>
+  <text class="s" x="486" y="317">rate limits, job queues</text>
+  <text class="k" x="490" y="402">turns run on the server,</text>
+  <text class="k" x="490" y="424">resumable by sequence number</text>
+
+  <!-- Outside systems -->
+  <rect class="box" x="910" y="95" width="250" height="60" rx="10"/>
+  <text class="t" x="926" y="121">Model providers</text>
+  <text class="s" x="926" y="142">OpenAI, Anthropic, Gemini</text>
+  <rect class="box" x="910" y="165" width="250" height="60" rx="10"/>
+  <text class="t" x="926" y="191">OpenAI-compatible</text>
+  <text class="s" x="926" y="212">Groq, OpenRouter, Ollama, ...</text>
+  <rect class="box" x="910" y="235" width="250" height="60" rx="10"/>
+  <text class="t" x="926" y="261">Web search</text>
+  <text class="s" x="926" y="282">SearXNG, Tavily, Exa, Brave</text>
+  <rect class="box" x="910" y="305" width="250" height="60" rx="10"/>
+  <text class="t" x="926" y="331">Public web pages</text>
+  <text class="s" x="926" y="352">open_url, SSRF guard per hop</text>
+  <rect class="box" x="910" y="375" width="250" height="60" rx="10"/>
+  <text class="t" x="926" y="401">S3 (private bucket)</text>
+  <text class="s" x="926" y="422">attachments, images, thumbs</text>
+  <rect class="box" x="910" y="445" width="250" height="60" rx="10"/>
+  <text class="t" x="926" y="471">Mail (SES or SMTP)</text>
+  <text class="s" x="926" y="492">verification, password reset</text>
+  <rect class="box" x="910" y="515" width="250" height="60" rx="10"/>
+  <text class="t" x="926" y="541">Moderation (optional)</text>
+  <text class="s" x="926" y="562">prompts checked, fails open</text>
+  <path class="la" d="M742 215 L908 125" marker-end="url(#b)"/>
+  <path class="la" d="M742 245 L908 195" marker-end="url(#b)"/>
+  <path class="la" d="M742 275 L908 265" marker-end="url(#b)"/>
+  <path class="la" d="M742 305 L908 335" marker-end="url(#b)"/>
+  <path class="ln" d="M742 335 L908 405" marker-end="url(#a)"/>
+  <path class="ln" d="M742 365 L908 475" marker-end="url(#a)"/>
+  <path class="ld" d="M742 395 L908 545" marker-end="url(#a)"/>
+
+  <!-- Bypass -->
+  <rect class="zone" x="40" y="596" width="1120" height="68" rx="12"/>
+  <text class="t" x="60" y="624">Paths and secrets that never cross the API as data</text>
+  <text class="s" x="60" y="648">File bytes: browser to S3 with a presigned PUT.  Provider keys: environment or Secrets Manager only, never in the database or a response.</text>
+</svg>

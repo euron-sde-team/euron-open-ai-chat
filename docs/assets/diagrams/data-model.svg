@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">Data model</title>
+  <desc id="desc">The schema in db/migrations/0001_init.sql grouped by domain. Identity: users, sessions, auth_tokens, totp_recovery_codes, user_preferences and quota_tiers. Conversations: conversations, messages forming a tree through parent_id with the shown branch marked by current_leaf_id, message_files, projects, project_files and memories. Files: files and file_chunks with a generated tsvector for full-text search. Catalogue: providers and models. Sharing and images: shares holding frozen snapshots, and the images gallery. Quotas and operations: user_quota_overrides, usage_daily, settings and audit_log. There is no tenant_id, no provider key column, and usage rows hold counts only.</desc>
+  <style>
+    .bg { fill: #f8fafc; }
+    .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.2; }
+    .acc { fill: #ecfafc; stroke: #0E99AD; stroke-width: 1.6; }
+    .zone { fill: none; stroke: #94a3b8; stroke-width: 1.2; stroke-dasharray: 6 5; }
+    .h { font: 600 20px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+    .t { font: 600 15px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+    .s { font: 13px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #475569; }
+    .m { font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #0f172a; }
+    .k { font: 600 13px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #0b7f90; }
+    .ln { stroke: #64748b; stroke-width: 1.5; fill: none; }
+    .ld { stroke: #64748b; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .la { stroke: #0E99AD; stroke-width: 1.8; fill: none; }
+    .ah { fill: #64748b; }
+    .aa { fill: #0E99AD; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0b1220; }
+      .box { fill: #111a2b; stroke: #2b3a55; }
+      .acc { fill: #0d2a33; stroke: #22b8cc; }
+      .zone { stroke: #475569; }
+      .h, .t, .m { fill: #e2e8f0; }
+      .s { fill: #94a3b8; }
+      .k { fill: #5fd3e3; }
+      .ln, .ld { stroke: #7c8aa5; }
+      .ah { fill: #7c8aa5; }
+      .la { stroke: #22b8cc; }
+      .aa { fill: #22b8cc; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="aa" d="M0 0L10 5L0 10z"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="700" rx="14"/>
+  <text class="h" x="40" y="48">Data model</text>
+  <text class="s" x="40" y="72">One migration, ULID text keys, timestamptz(3), keyset pagination. Arrows show the main references.</text>
+  <rect class="box" x="40" y="100" width="350" height="250" rx="10"/>
+  <text class="t" x="56" y="126">Identity</text>
+  <text class="s" x="56" y="147">users (role, status, token_version)</text>
+  <text class="s" x="56" y="167">sessions (rotating refresh family)</text>
+  <text class="s" x="56" y="187">auth_tokens</text>
+  <text class="s" x="56" y="207">totp_recovery_codes (HMACs)</text>
+  <text class="s" x="56" y="227">user_preferences</text>
+  <text class="s" x="56" y="247">quota_tiers (one default)</text>
+  <rect class="acc" x="425" y="100" width="350" height="250" rx="10"/>
+  <text class="t" x="441" y="126">Conversations</text>
+  <text class="s" x="441" y="147">conversations (current_leaf_id,</text>
+  <text class="s" x="441" y="167">  summary, summary_upto_id)</text>
+  <text class="s" x="441" y="187">messages (parent_id tree, status)</text>
+  <text class="s" x="441" y="207">message_files (INPUT, OUTPUT)</text>
+  <text class="s" x="441" y="227">projects, project_files</text>
+  <text class="s" x="441" y="247">memories (cap 200 per user)</text>
+  <rect class="box" x="810" y="100" width="350" height="160" rx="10"/>
+  <text class="t" x="826" y="126">Files</text>
+  <text class="s" x="826" y="147">files (owner_id, status, kind)</text>
+  <text class="s" x="826" y="167">file_chunks (generated tsvector,</text>
+  <text class="s" x="826" y="187">  GIN index, ADR 0009)</text>
+  <rect class="box" x="810" y="290" width="350" height="130" rx="10"/>
+  <text class="t" x="826" y="316">Catalogue</text>
+  <text class="s" x="826" y="337">providers (slug id, kind, base_url)</text>
+  <text class="s" x="826" y="357">models (kind, weight, context)</text>
+  <rect class="box" x="40" y="390" width="350" height="150" rx="10"/>
+  <text class="t" x="56" y="416">Quotas and operations</text>
+  <text class="s" x="56" y="437">user_quota_overrides</text>
+  <text class="s" x="56" y="457">usage_daily (counts only)</text>
+  <text class="s" x="56" y="477">settings (key 'app')</text>
+  <text class="s" x="56" y="497">audit_log</text>
+  <rect class="box" x="425" y="390" width="350" height="150" rx="10"/>
+  <text class="t" x="441" y="416">Sharing and images</text>
+  <text class="s" x="441" y="437">shares (frozen snapshot,</text>
+  <text class="s" x="441" y="457">  file_ids, 128-bit random id)</text>
+  <text class="s" x="441" y="477">images (gallery, prompt,</text>
+  <text class="s" x="441" y="497">  source_image_id for edits)</text>
+  <path class="ln" d="M390 225 L423 225" marker-end="url(#a)"/>
+  <path class="ln" d="M775 200 L808 180" marker-end="url(#a)"/>
+  <path class="ln" d="M775 300 L808 340" marker-end="url(#a)"/>
+  <path class="ln" d="M600 350 L600 388" marker-end="url(#a)"/>
+  <path class="ln" d="M215 350 L215 388" marker-end="url(#a)"/>
+  <path class="ln" d="M985 420 L985 470 H777" marker-end="url(#a)"/>
+
+  <!-- Notes -->
+  <rect class="zone" x="40" y="570" width="1120" height="100" rx="12"/>
+  <text class="t" x="60" y="600">What is deliberately not in the schema</text>
+  <text class="s" x="60" y="624">No tenant_id: one deployment serves one organisation.  No provider keys: they come from PROVIDER_KEYS at call time.</text>
+  <text class="s" x="60" y="646">Usage rows hold counts and model ids only, never prompt or answer text.  Tool traces keep labels, not inputs or outputs.</text>
+</svg>

@@ -1,0 +1,39 @@
+# Copy to terraform.tfvars (git-ignored) and replace every placeholder.
+region      = "us-east-1"
+name_prefix = "my-chat-dev" # the media bucket name derives from this: make it globally unique
+
+domain          = "app.dev.example.com" # one host: the web app and /api/*
+route53_zone_id = "<ROUTE53_HOSTED_ZONE_ID>" # automatic certificates + DNS; or set certificate_arn instead
+# mail_domain   = "example.com"              # defaults to domain
+
+# image_tag is passed by `make aws-deploy` (the git commit); set it here to pin a release.
+# image_tag = "0.1.0"
+
+# alarm_email = "oncall@example.com"
+
+# Graviton tasks (cheaper). Build the images to match: PLATFORM=linux/arm64 make aws-deploy
+# cpu_architecture = "ARM64"
+
+# Model providers. The keys live in <name_prefix>/provider-keys as one JSON object keyed
+# by provider slug (PROVIDER_KEYS). By default it is created with "set-me" placeholders,
+# which keeps the keys out of Terraform state; put the real ones in by hand:
+#   aws secretsmanager put-secret-value --secret-id <name_prefix>/provider-keys \
+#     --secret-string '{"openai":"<key>","anthropic":"<key>","openrouter":"<key>"}'
+# then roll the api and worker (make aws-deploy, or force a new deployment). Or pass
+# them here (they then land in Terraform state):
+# provider_keys = { openai = "<OPENAI_API_KEY>" }
+
+# Web search for the web_search tool (default none). A SearXNG you run, reachable from
+# the API's subnets, with the JSON format enabled:
+# search_provider = "searxng"
+# searxng_url     = "https://search.internal.example.com"
+# or a hosted API; its key goes into <name_prefix>/search ("set-me" until replaced):
+# search_provider = "tavily"   # or "exa", "brave"
+#   aws secretsmanager put-secret-value --secret-id <name_prefix>/search --secret-string \
+#     '{"TAVILY_API_KEY":"<key>","EXA_API_KEY":"set-me","BRAVE_API_KEY":"set-me"}'
+
+# Prompt moderation through the OpenAI moderation endpoint (needs an openai key above).
+# moderation_provider = "openai"
+
+# Browser uploads from a local web app running against this environment (make up-aws).
+# media_cors_extra_origins = ["http://localhost:3540"]

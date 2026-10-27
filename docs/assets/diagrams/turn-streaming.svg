@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">A turn: streaming and resume</title>
+  <desc id="desc">A client posts a message to /api/chats/:id/messages. One transaction stores the question and an empty STREAMING answer and moves the conversation's current_leaf_id to the answer. startTurn then runs the turn detached from the request inside the API task. The TurnWriter appends every event to the Redis Stream turn:&lt;id&gt;:events under the id 0-&lt;seq&gt; and publishes the sequence number on turn:&lt;id&gt;. An SSE subscriber on any API task subscribes first, reads what is already in the stream with XRANGE after the last sequence, then follows wakeups. A client that drops reconnects with GET /api/turns/:id/events?after=&lt;seq&gt;. Stop sets turn:&lt;id&gt;:cancel and publishes on turn:&lt;id&gt;:cancel, which aborts the provider call. At the end the answer is written to Postgres and usage is recorded. The stream is kept for 3600 seconds, and the sweep-turns job, every two minutes, fails answers still STREAMING after 15 minutes.</desc>
+  <style>
+    .bg { fill: #f8fafc; }
+    .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.2; }
+    .acc { fill: #ecfafc; stroke: #0E99AD; stroke-width: 1.6; }
+    .zone { fill: none; stroke: #94a3b8; stroke-width: 1.2; stroke-dasharray: 6 5; }
+    .h { font: 600 20px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+    .t { font: 600 15px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+    .s { font: 13px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #475569; }
+    .m { font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #0f172a; }
+    .k { font: 600 13px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #0b7f90; }
+    .ln { stroke: #64748b; stroke-width: 1.5; fill: none; }
+    .ld { stroke: #64748b; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .la { stroke: #0E99AD; stroke-width: 1.8; fill: none; }
+    .ah { fill: #64748b; }
+    .aa { fill: #0E99AD; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0b1220; }
+      .box { fill: #111a2b; stroke: #2b3a55; }
+      .acc { fill: #0d2a33; stroke: #22b8cc; }
+      .zone { stroke: #475569; }
+      .h, .t, .m { fill: #e2e8f0; }
+      .s { fill: #94a3b8; }
+      .k { fill: #5fd3e3; }
+      .ln, .ld { stroke: #7c8aa5; }
+      .ah { fill: #7c8aa5; }
+      .la { stroke: #22b8cc; }
+      .aa { fill: #22b8cc; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="aa" d="M0 0L10 5L0 10z"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="720" rx="14"/>
+  <text class="h" x="40" y="48">A turn: streaming and resume</text>
+  <text class="s" x="40" y="72">The turn belongs to the server, not to the HTTP connection. Any API task can serve its events; nothing is lost on a dropped connection.</text>
+
+  <!-- Client -->
+  <rect class="box" x="40" y="110" width="250" height="110" rx="10"/>
+  <text class="t" x="56" y="136">Client</text>
+  <text class="s" x="56" y="157">web app or native app</text>
+  <text class="m" x="56" y="177">POST /api/chats/:id/</text>
+  <text class="m" x="56" y="197">  messages</text>
+  <rect class="box" x="40" y="250" width="250" height="110" rx="10"/>
+  <text class="t" x="56" y="276">Reconnect</text>
+  <text class="s" x="56" y="297">after a drop or a reload</text>
+  <text class="m" x="56" y="317">GET /api/turns/:id/</text>
+  <text class="m" x="56" y="337">  events?after=&lt;seq&gt;</text>
+  <rect class="box" x="40" y="390" width="250" height="90" rx="10"/>
+  <text class="t" x="56" y="416">Stop</text>
+  <text class="s" x="56" y="437">POST /api/turns/:id/cancel</text>
+
+  <!-- API task A -->
+  <rect class="box" x="340" y="110" width="290" height="110" rx="10"/>
+  <text class="t" x="356" y="136">1. Transaction</text>
+  <text class="s" x="356" y="157">question + STREAMING answer</text>
+  <text class="s" x="356" y="177">current_leaf_id moves to answer</text>
+  <text class="s" x="356" y="197">202 TurnStarted or SSE</text>
+  <rect class="acc" x="340" y="250" width="290" height="150" rx="10"/>
+  <text class="t" x="356" y="276">2. startTurn (detached)</text>
+  <text class="s" x="356" y="297">quota, moderation, context,</text>
+  <text class="s" x="356" y="317">model rounds with tools,</text>
+  <text class="s" x="356" y="337">then persist and recordUsage</text>
+  <text class="m" x="356" y="357">TurnWriter.emit(event)</text>
+  <path class="la" d="M290 165 L338 165" marker-end="url(#b)"/>
+  <path class="la" d="M485 220 L485 248" marker-end="url(#b)"/>
+
+  <!-- Redis -->
+  <rect class="box" x="680" y="110" width="300" height="170" rx="10"/>
+  <text class="t" x="696" y="136">Redis 7</text>
+  <text class="m" x="696" y="157">XADD turn:&lt;id&gt;:events</text>
+  <text class="m" x="696" y="177">  id 0-&lt;seq&gt;</text>
+  <text class="m" x="696" y="197">PUBLISH turn:&lt;id&gt; &lt;seq&gt;</text>
+  <text class="m" x="696" y="217">EXPIRE 3600 s</text>
+  <rect class="box" x="680" y="300" width="300" height="110" rx="10"/>
+  <text class="t" x="696" y="326">Cancel</text>
+  <text class="s" x="696" y="347">aborts the provider call</text>
+  <text class="m" x="696" y="367">SET turn:&lt;id&gt;:cancel</text>
+  <text class="m" x="696" y="387">PUBLISH turn:&lt;id&gt;:cancel</text>
+  <path class="la" d="M630 300 L678 210" marker-end="url(#b)"/>
+  <path class="ld" d="M678 320 L632 320" marker-end="url(#a)"/>
+  <path class="ln" d="M290 420 H662 V380 H678" marker-end="url(#a)"/>
+
+  <!-- API task B -->
+  <rect class="box" x="1010" y="110" width="170" height="170" rx="10"/>
+  <text class="t" x="1026" y="136">SSE on any task</text>
+  <text class="s" x="1026" y="157">1. SUBSCRIBE</text>
+  <text class="s" x="1026" y="177">2. XRANGE after</text>
+  <text class="s" x="1026" y="197">3. follow wakeups</text>
+  <text class="s" x="1026" y="217">until done</text>
+  <path class="la" d="M980 190 L1008 190" marker-end="url(#b)"/>
+  <path class="ln" d="M1095 280 V536 H310 V305 H292" marker-end="url(#a)"/>
+  <text class="s" x="330" y="522">id: &lt;seq&gt;, event: &lt;type&gt;, data: TurnEvent JSON; keep-alive comment every 15 s</text>
+
+  <!-- Postgres -->
+  <rect class="box" x="680" y="430" width="300" height="60" rx="10"/>
+  <text class="t" x="696" y="456">PostgreSQL</text>
+  <text class="s" x="696" y="477">answer row: final status</text>
+  <path class="ln" d="M630 385 L678 455" marker-end="url(#a)"/>
+
+  <!-- Footer -->
+  <rect class="zone" x="40" y="560" width="1120" height="130" rx="12"/>
+  <text class="t" x="60" y="590">After the turn</text>
+  <text class="s" x="60" y="614">The stream outlives the turn by 3600 s, so a phone back from the background still collects the ending. After that, the events route replays</text>
+  <text class="s" x="60" y="634">the finished message from Postgres as message.completed and done. maintenance.sweep-turns runs every 2 minutes and marks answers still</text>
+  <text class="s" x="60" y="654">STREAMING after 15 minutes (a task that died) as FAILED, so the conversation can go on. A disconnect never stops a turn; only cancel does.</text>
+</svg>

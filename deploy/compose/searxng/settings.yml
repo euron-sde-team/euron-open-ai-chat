@@ -1,0 +1,25 @@
+# SearXNG for the local stack (the compose `searxng` service), read-only mounted at
+# /etc/searxng/settings.yml. Everything not set here keeps the upstream defaults.
+#
+# The API calls GET /search?q=...&format=json, so the JSON format must be enabled
+# (it is off upstream). server.secret_key below is a placeholder: the container reads
+# SEARXNG_SECRET from deploy/compose/.env (CHAT_SEARXNG_SECRET, written by make env),
+# which overrides it.
+use_default_settings: true
+
+general:
+  instance_name: "Euron Open AI Chat search"
+
+server:
+  secret_key: "set-by-SEARXNG_SECRET"
+  # Only the API on the compose network calls it: no bot limiter (it would need a
+  # Valkey), no image proxy, not a public instance.
+  limiter: false
+  image_proxy: false
+  public_instance: false
+
+search:
+  safe_search: 1
+  formats:
+    - html
+    - json

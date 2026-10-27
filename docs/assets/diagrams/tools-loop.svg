@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">The tools loop</title>
+  <desc id="desc">The context builder assembles the system prompt layers, the branch path from the root to the question and fits it to the model's budget. The model is called through its adapter and streams text, reasoning and tool calls. If the round produced tool calls, the server runs them (web_search, open_url, generate_image, remember, search_project_files) and appends each result as a message with role tool, wrapped and labelled as untrusted data, then calls the model again. At most four rounds and eight tool calls run per turn, and tools are not offered on the last round. A model without function calling gets one web search on the question before its only call. open_url checks every hop: URL shape, DNS resolution, every address public, the connection pinned to the checked address, redirects followed by hand at most four times, at most 2 MB in 12 seconds, text content types only.</desc>
+  <style>
+    .bg { fill: #f8fafc; }
+    .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.2; }
+    .acc { fill: #ecfafc; stroke: #0E99AD; stroke-width: 1.6; }
+    .zone { fill: none; stroke: #94a3b8; stroke-width: 1.2; stroke-dasharray: 6 5; }
+    .h { font: 600 20px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+    .t { font: 600 15px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+    .s { font: 13px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #475569; }
+    .m { font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #0f172a; }
+    .k { font: 600 13px system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #0b7f90; }
+    .ln { stroke: #64748b; stroke-width: 1.5; fill: none; }
+    .ld { stroke: #64748b; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .la { stroke: #0E99AD; stroke-width: 1.8; fill: none; }
+    .ah { fill: #64748b; }
+    .aa { fill: #0E99AD; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0b1220; }
+      .box { fill: #111a2b; stroke: #2b3a55; }
+      .acc { fill: #0d2a33; stroke: #22b8cc; }
+      .zone { stroke: #475569; }
+      .h, .t, .m { fill: #e2e8f0; }
+      .s { fill: #94a3b8; }
+      .k { fill: #5fd3e3; }
+      .ln, .ld { stroke: #7c8aa5; }
+      .ah { fill: #7c8aa5; }
+      .la { stroke: #22b8cc; }
+      .aa { fill: #22b8cc; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="aa" d="M0 0L10 5L0 10z"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="700" rx="14"/>
+  <text class="h" x="40" y="48">The tools loop</text>
+  <text class="s" x="40" y="72">Native function calls. Results go back as tool messages, never into the system prompt.</text>
+  <rect class="box" x="40" y="110" width="280" height="170" rx="10"/>
+  <text class="t" x="56" y="136">1. Context builder</text>
+  <text class="s" x="56" y="157">system prompt layers</text>
+  <text class="s" x="56" y="177">branch path, root to question</text>
+  <text class="s" x="56" y="197">budget: window minus output</text>
+  <text class="s" x="56" y="217">minus tool headroom</text>
+  <text class="s" x="56" y="237">rolling summary if too long</text>
+  <rect class="acc" x="380" y="110" width="260" height="170" rx="10"/>
+  <text class="t" x="396" y="136">2. Model call</text>
+  <text class="s" x="396" y="157">adapter.stream(request)</text>
+  <text class="s" x="396" y="177">text, reasoning deltas</text>
+  <text class="s" x="396" y="197">tool calls, usage, finish</text>
+  <text class="m" x="396" y="217">message.delta events</text>
+  <rect class="box" x="700" y="110" width="200" height="90" rx="10"/>
+  <text class="t" x="716" y="136">3. Tool calls?</text>
+  <text class="s" x="716" y="157">no: answer is done</text>
+  <rect class="box" x="950" y="110" width="210" height="170" rx="10"/>
+  <text class="t" x="966" y="136">Done</text>
+  <text class="s" x="966" y="157">persist the answer</text>
+  <text class="s" x="966" y="177">record usage</text>
+  <text class="s" x="966" y="197">title on first answer</text>
+  <text class="s" x="966" y="217">summary job if dropped</text>
+  <path class="la" d="M320 195 L378 195" marker-end="url(#b)"/>
+  <path class="la" d="M640 155 L698 155" marker-end="url(#b)"/>
+  <path class="ln" d="M900 155 L948 155" marker-end="url(#a)"/>
+  <text class="k" x="908" y="146">no</text>
+  <rect class="box" x="660" y="250" width="260" height="210" rx="10"/>
+  <text class="t" x="676" y="276">4. Run tools</text>
+  <text class="s" x="676" y="297">web_search</text>
+  <text class="s" x="676" y="317">open_url</text>
+  <text class="s" x="676" y="337">generate_image</text>
+  <text class="s" x="676" y="357">remember</text>
+  <text class="s" x="676" y="377">search_project_files</text>
+  <text class="m" x="676" y="397">tool.started/finished</text>
+  <path class="la" d="M800 200 L800 248" marker-end="url(#b)"/>
+  <text class="k" x="810" y="232">yes</text>
+  <rect class="box" x="330" y="330" width="290" height="130" rx="10"/>
+  <text class="t" x="346" y="356">5. Append results</text>
+  <text class="s" x="346" y="377">role "tool" message per call</text>
+  <text class="s" x="346" y="397">external content wrapped:</text>
+  <text class="s" x="346" y="417">"Untrusted external content"</text>
+  <path class="la" d="M660 395 L622 395" marker-end="url(#b)"/>
+  <path class="la" d="M475 330 L510 282" marker-end="url(#b)"/>
+  <text class="k" x="350" y="312">next round</text>
+  <rect class="box" x="40" y="330" width="250" height="130" rx="10"/>
+  <text class="t" x="56" y="356">Limits per turn</text>
+  <text class="s" x="56" y="377">MAX_ROUNDS 4</text>
+  <text class="s" x="56" y="397">MAX_CALLS 8</text>
+  <text class="s" x="56" y="417">no tools on the last round</text>
+  <text class="s" x="56" y="437">a failing tool returns an error</text>
+
+  <!-- Pre-search and guard -->
+  <rect class="box" x="40" y="490" width="520" height="90" rx="10"/>
+  <text class="t" x="56" y="516">Models without function calling</text>
+  <text class="s" x="56" y="537">one web_search on the question, given as untrusted data</text>
+  <text class="s" x="56" y="557">prepended to the last user message, before the only call</text>
+  <rect class="acc" x="600" y="490" width="560" height="180" rx="10"/>
+  <text class="t" x="616" y="516">open_url guard, every hop</text>
+  <text class="s" x="616" y="537">checkUrlShape: http(s), ports 80/443, no user:pass, no .local</text>
+  <text class="s" x="616" y="557">resolve DNS; every address must be public unicast</text>
+  <text class="s" x="616" y="577">pin the connection to the vetted address (no rebinding)</text>
+  <text class="s" x="616" y="597">redirects by hand, at most 4 hops, each checked again</text>
+  <text class="s" x="616" y="617">at most 2 MB read, 12 s, text content types only</text>
+  <path class="ld" d="M790 460 L860 488" marker-end="url(#a)"/>
+</svg>
